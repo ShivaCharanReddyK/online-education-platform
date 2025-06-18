@@ -7,7 +7,7 @@ export function Footer() {
           &copy; {new Date().getFullYear()} LearnFlow. All rights reserved.
         </p>
         <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-          Built with Next.js and ShadCN UI.
+          Built with Next.js
         </p>
       </div>
     </footer>
