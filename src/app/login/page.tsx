@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from 'next/link';
 import { LogIn, GraduationCap, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { MainLayout } from '@/components/shared/MainLayout';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -49,70 +50,72 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="inline-block mx-auto p-3 bg-primary rounded-full mb-4">
-            <LogIn className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <CardTitle className="text-3xl font-headline">Welcome Back!</CardTitle>
-          <CardDescription>Log in to your LearnFlow account.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+    <MainLayout>
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardHeader className="text-center">
+            <div className="inline-block mx-auto p-3 bg-primary rounded-full mb-4">
+              <LogIn className="h-8 w-8 text-primary-foreground" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-3">
-              <Label>Log in as</Label>
-              <RadioGroup defaultValue="student" onValueChange={(value: 'student' | 'counselor') => setRole(value)} className="flex gap-4" disabled={isLoading}>
-                <Label htmlFor="role-student" className="flex items-center space-x-2 p-3 border rounded-md hover:bg-muted/50 cursor-pointer data-[state=checked]:border-primary flex-1 justify-center">
-                  <RadioGroupItem value="student" id="role-student" />
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  <span>Student</span>
-                </Label>
-                <Label htmlFor="role-counselor" className="flex items-center space-x-2 p-3 border rounded-md hover:bg-muted/50 cursor-pointer data-[state=checked]:border-primary flex-1 justify-center">
-                  <RadioGroupItem value="counselor" id="role-counselor" />
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  <span>Counselor</span>
-                </Label>
-              </RadioGroup>
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Log In'}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="text-center text-sm">
-          <p>
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+            <CardTitle className="text-3xl font-headline">Welcome Back!</CardTitle>
+            <CardDescription>Log in to your LearnFlow account.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label>Log in as</Label>
+                <RadioGroup defaultValue="student" onValueChange={(value: 'student' | 'counselor') => setRole(value)} className="flex gap-4" disabled={isLoading}>
+                  <Label htmlFor="role-student" className="flex items-center space-x-2 p-3 border rounded-md hover:bg-muted/50 cursor-pointer data-[state=checked]:border-primary flex-1 justify-center">
+                    <RadioGroupItem value="student" id="role-student" />
+                    <GraduationCap className="h-5 w-5 text-primary" />
+                    <span>Student</span>
+                  </Label>
+                  <Label htmlFor="role-counselor" className="flex items-center space-x-2 p-3 border rounded-md hover:bg-muted/50 cursor-pointer data-[state=checked]:border-primary flex-1 justify-center">
+                    <RadioGroupItem value="counselor" id="role-counselor" />
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    <span>Counselor</span>
+                  </Label>
+                </RadioGroup>
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Log In'}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="text-center text-sm">
+            <p>
+              Don&apos;t have an account?{' '}
+              <Link href="/signup" className="font-medium text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+    </MainLayout>
   );
 }
