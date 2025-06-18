@@ -1,14 +1,15 @@
 
 import type { Program, Application } from '@/types';
 
-export const DUMMY_PROGRAMS: Program[] = [
+// DUMMY_PROGRAMS is now primarily for seeding the database if empty.
+// The application will fetch programs from MongoDB.
+export const DUMMY_PROGRAMS: Omit<Program, '_id' | 'id'>[] = [
   {
-    id: 'prog-1',
     title: 'Full-Stack Web Development Bootcamp',
     description: 'Become a job-ready web developer. Learn front-end and back-end technologies.',
     category: 'Technology',
     duration: '6 Months',
-    startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Approx 1 month from now
+    startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'laptop code',
     features: ['JavaScript, React, Node.js', 'Real-world projects', 'Career support'],
@@ -30,12 +31,11 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-2',
     title: 'Digital Marketing Specialist Program',
     description: 'Master SEO, SEM, social media marketing, and content strategy.',
     category: 'Marketing',
     duration: '3 Months',
-    startDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // Approx 2 months from now
+    startDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'marketing analytics',
     features: ['Google Ads & Analytics certified', 'Hands-on campaigns', 'Industry case studies'],
@@ -57,12 +57,11 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-3',
     title: 'Data Science & Machine Learning Certificate',
     description: 'Unlock the power of data with Python, R, and machine learning algorithms.',
     category: 'Data Science',
     duration: '9 Months',
-    startDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // Approx 1.5 months from now
+    startDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'data charts',
     features: ['Python, R, TensorFlow, Scikit-learn', 'Capstone project', 'Expert instructors'],
@@ -84,12 +83,11 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
    {
-    id: 'prog-4',
     title: 'Cybersecurity Analyst Training',
     description: 'Learn to protect systems and data from cyber threats. Covers network security, ethical hacking, and incident response.',
     category: 'Technology',
     duration: '7 Months',
-    startDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(), // Approx 2.5 months from now
+    startDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(),
     imageUrl: 'https://placehold.co/600x400.png',
     aiHint: 'security shield',
     features: ['Hands-on labs', 'Industry-recognized tools', 'Preparation for CompTIA Security+'],
@@ -111,7 +109,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-5',
     title: 'UX/UI Design Professional Certificate',
     description: 'Master user-centered design principles, wireframing, prototyping, and user testing.',
     category: 'Creative Arts',
@@ -138,7 +135,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-6',
     title: 'Cloud Computing & DevOps Engineering',
     description: 'Learn AWS, Azure, Docker, Kubernetes, and CI/CD pipelines for scalable infrastructure.',
     category: 'Technology',
@@ -165,7 +161,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-7',
     title: 'Business Analytics Specialization',
     description: 'Leverage data to make informed business decisions. Learn Excel, SQL, and Tableau.',
     category: 'Business',
@@ -192,7 +187,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-8',
     title: 'Artificial Intelligence Fundamentals',
     description: 'Explore core AI concepts, machine learning, natural language processing, and computer vision.',
     category: 'Data Science',
@@ -219,7 +213,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-9',
     title: 'Graphic Design Masterclass',
     description: 'Unleash your creativity with Adobe Photoshop, Illustrator, and InDesign. For print and web.',
     category: 'Creative Arts',
@@ -245,7 +238,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-10',
     title: 'Project Management Professional (PMP) Prep',
     description: 'Prepare for the PMP certification exam. Covers Agile, Scrum, and traditional project management.',
     category: 'Business',
@@ -271,7 +263,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-11',
     title: 'Mobile App Development (iOS & Android)',
     description: 'Learn to build native mobile apps using Swift for iOS and Kotlin for Android.',
     category: 'Technology',
@@ -298,7 +289,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-12',
     title: 'Content Writing & SEO Strategy',
     description: 'Create compelling content that ranks. Learn keyword research, on-page SEO, and content promotion.',
     category: 'Marketing',
@@ -324,7 +314,6 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-13',
     title: 'Blockchain Technology Fundamentals',
     description: 'Understand the core concepts of blockchain, cryptocurrencies, smart contracts, and DApps.',
     category: 'Technology',
@@ -350,14 +339,13 @@ export const DUMMY_PROGRAMS: Program[] = [
     ]
   },
   {
-    id: 'prog-14',
     title: 'Photography Masterclass: From Novice to Pro',
     description: 'Learn camera settings, composition, lighting, and post-processing techniques.',
     category: 'Creative Arts',
     duration: '6 Weeks',
     startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
     imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'camera photography',
+    aiHint: 'camera lens',
     features: ['DSLR/Mirrorless camera operation', 'Adobe Lightroom & Photoshop for editing', 'Genre exploration (portrait, landscape)'],
     tuitionFee: 1500,
     longDescription: 'This comprehensive photography masterclass is designed for aspiring photographers of all levels. You will learn how to master your camera, understand the principles of composition and lighting, and edit your photos like a professional using Adobe Lightroom and Photoshop.',
@@ -374,35 +362,293 @@ export const DUMMY_PROGRAMS: Program[] = [
       { title: 'Week 5: Post-Processing with Lightroom & Photoshop', description: 'Workflow, editing techniques.' },
       { title: 'Week 6: Genre Exploration & Portfolio Building', description: 'Portrait, landscape, street photography projects.' },
     ]
+  },
+  // Added 10 new programs
+  {
+    title: 'Sustainable Energy Engineering',
+    description: 'Explore renewable energy sources, energy efficiency, and sustainable system design.',
+    category: 'Engineering',
+    duration: '12 Months',
+    startDate: new Date(Date.now() + 100 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'wind turbine',
+    features: ['Solar, Wind, Geothermal energy', 'Energy policy and economics', 'System modeling'],
+    tuitionFee: 9000,
+    longDescription: 'This program delves into the principles and practices of sustainable energy engineering. Students will learn about various renewable energy technologies, energy storage solutions, and the design of efficient energy systems. It also covers the economic and policy aspects of sustainable energy.',
+    learningOutcomes: [
+      'Analyze and design renewable energy systems.',
+      'Understand energy conversion and storage technologies.',
+      'Evaluate the environmental and economic impact of energy projects.',
+      'Apply system modeling tools for energy analysis.',
+      'Understand sustainable energy policies and regulations.'
+    ],
+    modules: [
+      { title: 'Module 1: Introduction to Sustainable Energy', description: 'Global energy landscape, climate change.'},
+      { title: 'Module 2: Renewable Energy Technologies', description: 'Solar PV, wind turbines, biomass, geothermal.'},
+      { title: 'Module 3: Energy Efficiency and Management', description: 'Building energy systems, industrial efficiency.'},
+      { title: 'Module 4: Energy Storage and Grid Integration', description: 'Batteries, pumped hydro, smart grids.'},
+      { title: 'Module 5: Policy, Economics, and Capstone Project', description: 'Regulations, market analysis, final project.'},
+    ]
+  },
+  {
+    title: 'Culinary Arts: Professional Chef Program',
+    description: 'Master essential cooking techniques, international cuisines, and kitchen management.',
+    category: 'Culinary Arts',
+    duration: '9 Months',
+    startDate: new Date(Date.now() + 50 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'chef cooking',
+    features: ['Hands-on kitchen training', 'Menu development', 'Food safety and sanitation'],
+    tuitionFee: 12000,
+    longDescription: 'Embark on a journey to become a professional chef. This program offers intensive hands-on training in classical and contemporary cooking techniques, Garde Manger, baking, and pastry. Students will also learn about menu planning, cost control, and kitchen operations.',
+    learningOutcomes: [
+      'Master a wide range of cooking techniques.',
+      'Prepare dishes from various international cuisines.',
+      'Understand principles of food science and nutrition.',
+      'Manage kitchen operations, including inventory and cost control.',
+      'Adhere to food safety and sanitation standards.'
+    ],
+    modules: [
+      { title: 'Module 1: Culinary Fundamentals & Knife Skills', description: 'Basic cuts, stocks, sauces.'},
+      { title: 'Module 2: International Cuisines', description: 'French, Italian, Asian, Latin American techniques.'},
+      { title: 'Module 3: Baking and Pastry Arts', description: 'Breads, cakes, desserts, chocolate work.'},
+      { title: 'Module 4: Garde Manger & Charcuterie', description: 'Cold kitchen preparations, pates, sausages.'},
+      { title: 'Module 5: Kitchen Management & Capstone Dinner', description: 'Menu planning, costing, final practical exam.'},
+    ]
+  },
+  {
+    title: 'Game Development with Unity',
+    description: 'Learn to create 2D and 3D games using the Unity engine and C# programming.',
+    category: 'Technology',
+    duration: '7 Months',
+    startDate: new Date(Date.now() + 65 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'game controller',
+    features: ['Unity Engine, C# scripting', 'Game physics and AI basics', 'Asset integration'],
+    tuitionFee: 6500,
+    longDescription: 'This program provides a comprehensive introduction to game development using the powerful Unity engine. Students will learn C# programming for game logic, level design, character animation, UI implementation, and game physics. The course culminates in developing and publishing a playable game.',
+    learningOutcomes: [
+      'Develop 2D and 3D games using Unity.',
+      'Program game mechanics and logic using C#.',
+      'Design game levels and environments.',
+      'Implement character animations and AI behaviors.',
+      'Optimize and publish games for various platforms.'
+    ],
+    modules: [
+      { title: 'Module 1: Unity & C# Fundamentals', description: 'Unity interface, scripting basics.'},
+      { title: 'Module 2: 2D Game Development', description: 'Sprites, tilemaps, 2D physics.'},
+      { title: 'Module 3: 3D Game Development', description: '3D models, terrain, lighting, 3D physics.'},
+      { title: 'Module 4: Game AI & UI', description: 'Pathfinding, behavior trees, UI elements.'},
+      { title: 'Module 5: Optimization & Publishing', description: 'Performance tuning, build process.'},
+    ]
+  },
+  {
+    title: 'Ethical Hacking & Penetration Testing Pro',
+    description: 'Advanced techniques in ethical hacking, vulnerability assessment, and exploit development.',
+    category: 'Cybersecurity',
+    duration: '5 Months',
+    startDate: new Date(Date.now() + 85 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'hacker code',
+    features: ['Advanced Kali Linux tools', 'Web app & network penetration testing', 'Reporting and mitigation'],
+    tuitionFee: 7000,
+    longDescription: 'Dive deeper into the world of offensive security. This advanced program focuses on practical penetration testing methodologies for web applications, networks, and systems. Learn to use sophisticated tools, develop custom exploits, and provide comprehensive reports with mitigation strategies.',
+    learningOutcomes: [
+      'Conduct comprehensive penetration tests on various systems.',
+      'Identify and exploit complex vulnerabilities.',
+      'Understand advanced attack vectors and defense evasion techniques.',
+      'Develop custom scripts and tools for ethical hacking.',
+      'Write professional penetration testing reports.'
+    ],
+    modules: [
+      { title: 'Module 1: Advanced Reconnaissance & Enumeration', description: 'Footprinting, scanning techniques.'},
+      { title: 'Module 2: Web Application Penetration Testing', description: 'OWASP Top 10, SQL injection, XSS.'},
+      { title: 'Module 3: Network & Infrastructure Hacking', description: 'Exploiting services, pivoting, post-exploitation.'},
+      { title: 'Module 4: Wireless & Mobile Security Testing', description: 'Wi-Fi hacking, mobile app vulnerabilities.'},
+      { title: 'Module 5: Exploit Development & Reporting', description: 'Buffer overflows, custom exploits, professional reporting.'},
+    ]
+  },
+  {
+    title: 'Interior Design Fundamentals',
+    description: 'Learn principles of space planning, color theory, materials, and furniture selection.',
+    category: 'Creative Arts',
+    duration: '4 Months',
+    startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'modern interior',
+    features: ['SketchUp for 3D modeling', 'Client presentation skills', 'Sustainable design practices'],
+    tuitionFee: 4200,
+    longDescription: 'This program introduces the core concepts of interior design. Students will learn about space planning, ergonomics, color psychology, material selection, lighting design, and creating cohesive design schemes. The course includes an introduction to 3D modeling software and focuses on developing a strong design portfolio.',
+    learningOutcomes: [
+      'Apply principles of space planning and layout.',
+      'Understand color theory and its application in interiors.',
+      'Select appropriate materials, finishes, and furniture.',
+      'Create basic 3D models and design presentations.',
+      'Develop a foundational understanding of interior design styles.'
+    ],
+    modules: [
+      { title: 'Module 1: Introduction to Interior Design', description: 'History, styles, design process.'},
+      { title: 'Module 2: Space Planning & Ergonomics', description: 'Layouts, circulation, human factors.'},
+      { title: 'Module 3: Color, Materials & Lighting', description: 'Color schemes, textiles, lighting techniques.'},
+      { title: 'Module 4: 3D Modeling & Presentation', description: 'SketchUp basics, mood boards, client communication.'},
+    ]
+  },
+  {
+    title: 'Personal Finance & Wealth Management',
+    description: 'Master budgeting, investing, retirement planning, and strategies for financial independence.',
+    category: 'Business',
+    duration: '3 Months',
+    startDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'money growth',
+    features: ['Investment strategies (stocks, bonds, real estate)', 'Tax planning basics', 'Risk management'],
+    tuitionFee: 2800,
+    longDescription: 'Take control of your financial future with this comprehensive program on personal finance and wealth management. Learn how to create effective budgets, understand different investment vehicles, plan for retirement, manage debt, and make informed financial decisions.',
+    learningOutcomes: [
+      'Create and manage a personal budget effectively.',
+      'Understand different investment options and strategies.',
+      'Develop a long-term financial plan for retirement.',
+      'Learn about risk management and insurance.',
+      'Make informed decisions about debt and credit.'
+    ],
+    modules: [
+      { title: 'Module 1: Budgeting & Financial Goal Setting', description: 'Tracking expenses, saving strategies.'},
+      { title: 'Module 2: Investing Fundamentals', description: 'Stocks, bonds, mutual funds, ETFs, risk tolerance.'},
+      { title: 'Module 3: Retirement & Estate Planning', description: '401(k)s, IRAs, wills, trusts basics.'},
+      { title: 'Module 4: Debt Management & Tax Strategies', description: 'Credit scores, loan management, tax efficiency.'},
+    ]
+  },
+  {
+    title: 'Creative Writing: Fiction & Non-Fiction',
+    description: 'Develop your writing skills in various genres, from short stories and novels to essays and memoirs.',
+    category: 'Creative Arts',
+    duration: '5 Months',
+    startDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'writing notebook',
+    features: ['Workshops and critiques', 'Character development, plot structure', 'Publishing industry insights'],
+    tuitionFee: 3300,
+    longDescription: 'Unleash your inner author with this creative writing program. Explore techniques for crafting compelling narratives in both fiction and non-fiction. The course covers character development, plot construction, point of view, dialogue, and a_lot_more. Includes workshops for peer feedback and guidance on navigating the publishing world.',
+    learningOutcomes: [
+      'Develop compelling characters and engaging plots.',
+      'Master techniques of narrative structure and point of view.',
+      'Write effective dialogue and vivid descriptions.',
+      'Provide and receive constructive criticism in a workshop setting.',
+      'Understand the basics of the publishing process.'
+    ],
+    modules: [
+      { title: 'Module 1: Elements of Storytelling', description: 'Plot, character, setting, theme, conflict.'},
+      { title: 'Module 2: Fiction Workshop', description: 'Short stories, novel excerpts, genre writing.'},
+      { title: 'Module 3: Non-Fiction Workshop', description: 'Essays, memoir, feature writing.'},
+      { title: 'Module 4: Advanced Techniques & Revision', description: 'Voice, style, editing strategies.'},
+      { title: 'Module 5: The Writer\'s Life & Publishing', description: 'Submission process, literary agents.'},
+    ]
+  },
+  {
+    title: 'Foreign Language Intensive: Spanish',
+    description: 'Achieve conversational fluency in Spanish through immersive learning and practice.',
+    category: 'Languages',
+    duration: '6 Months',
+    startDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'language flags',
+    features: ['Native-speaking instructors', 'Cultural immersion activities', 'Focus on speaking and listening'],
+    tuitionFee: 4000,
+    longDescription: 'This intensive Spanish language program is designed to take students from beginner or intermediate levels to conversational fluency. The curriculum emphasizes practical communication skills, grammar, vocabulary, and cultural understanding. Taught by native speakers, the course includes interactive exercises and real-world scenarios.',
+    learningOutcomes: [
+      'Communicate effectively in Spanish in everyday situations.',
+      'Understand spoken Spanish from native speakers.',
+      'Read and write basic to intermediate Spanish texts.',
+      'Develop a strong foundation in Spanish grammar and vocabulary.',
+      'Gain insights into Spanish-speaking cultures.'
+    ],
+    modules: [
+      { title: 'Module 1-2: Beginner Spanish (A1-A2)', description: 'Greetings, basic grammar, everyday vocabulary.'},
+      { title: 'Module 3-4: Intermediate Spanish (B1)', description: 'Complex sentences, past tenses, expressing opinions.'},
+      { title: 'Module 5-6: Upper Intermediate Spanish (B2)', description: 'Advanced grammar, nuanced conversation, cultural topics.'},
+    ]
+  },
+  {
+    title: 'Music Production with Ableton Live',
+    description: 'Learn to compose, record, mix, and master music using Ableton Live software.',
+    category: 'Music Production',
+    duration: '4 Months',
+    startDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'music mixer',
+    features: ['Ableton Live software proficiency', 'MIDI and audio recording', 'Sound design basics'],
+    tuitionFee: 3600,
+    longDescription: 'Dive into the world of music production with Ableton Live. This program covers everything from setting up your first session to advanced mixing and mastering techniques. Learn MIDI programming, audio recording, synthesis, sampling, and effects processing to create professional-sounding tracks.',
+    learningOutcomes: [
+      'Navigate and operate Ableton Live efficiently.',
+      'Record and edit MIDI and audio.',
+      'Understand principles of synthesis and sound design.',
+      'Mix and master tracks for various playback systems.',
+      'Compose original music in a chosen genre.'
+    ],
+    modules: [
+      { title: 'Module 1: Ableton Live Interface & Workflow', description: 'Session/Arrangement view, MIDI clips, audio clips.'},
+      { title: 'Module 2: Recording & Sound Design', description: 'Microphones, audio interfaces, synthesis, sampling.'},
+      { title: 'Module 3: Arranging & Composition', description: 'Song structure, automation, effects processing.'},
+      { title: 'Module 4: Mixing & Mastering', description: 'Levels, EQ, compression, mastering chain.'},
+    ]
+  },
+  {
+    title: 'Health & Wellness Coaching Certification',
+    description: 'Become a certified health coach. Learn motivational interviewing, nutrition basics, and behavior change strategies.',
+    category: 'Health & Wellness',
+    duration: '8 Months',
+    startDate: new Date(Date.now() + 70 * 24 * 60 * 60 * 1000).toISOString(),
+    imageUrl: 'https://placehold.co/600x400.png',
+    aiHint: 'healthy food',
+    features: ['Evidence-based coaching techniques', 'Client assessment skills', 'Ethics and professional standards'],
+    tuitionFee: 5500,
+    longDescription: 'This certification program prepares individuals to become effective health and wellness coaches. Students will learn coaching methodologies, including motivational interviewing, goal setting, and behavior change theories. The curriculum also covers foundational knowledge in nutrition, fitness, stress management, and chronic disease prevention.',
+    learningOutcomes: [
+      'Apply effective coaching skills to support client behavior change.',
+      'Understand foundational principles of nutrition and physical activity.',
+      'Conduct client assessments and develop personalized wellness plans.',
+      'Utilize motivational interviewing techniques.',
+      'Adhere to ethical guidelines and professional standards for health coaching.'
+    ],
+    modules: [
+      { title: 'Module 1: Foundations of Health Coaching', description: 'Coaching models, ethics, scope of practice.'},
+      { title: 'Module 2: Nutrition & Physical Activity Science', description: 'Macronutrients, exercise guidelines.'},
+      { title: 'Module 3: Behavior Change & Motivational Interviewing', description: 'Stages of change, communication skills.'},
+      { title: 'Module 4: Stress Management & Wellbeing', description: 'Mindfulness, sleep hygiene, holistic wellness.'},
+      { title: 'Module 5: Coaching Practicum & Business Development', description: 'Supervised coaching, marketing your practice.'},
+    ]
   }
 ];
 
+// DUMMY_APPLICATIONS: This data will now be managed in MongoDB.
+// This array can be removed or used for one-time seeding if necessary.
 export const DUMMY_APPLICATIONS: Application[] = [
-  {
-    id: 'app-1',
-    userId: 'student-1',
-    programId: 'prog-1',
-    personalDetails: { firstName: 'Alice', lastName: 'Smith', dateOfBirth: '1995-03-15', phone: '555-1234', address: '123 Main St, Anytown USA', email: 'alice.smith@example.com' },
-    educationalBackground: { highestQualification: 'B.Sc. Computer Science', institution: 'State University', yearOfCompletion: '2017' },
-    statementOfPurpose: 'I am passionate about web development and wish to transition my career into this field.',
-    status: 'pending',
-    referenceNumber: 'LF20240001',
-    submissionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-  },
-  {
-    id: 'app-2',
-    userId: 'student-2',
-    programId: 'prog-2',
-    personalDetails: { firstName: 'Bob', lastName: 'Johnson', dateOfBirth: '1998-07-22', phone: '555-5678', address: '456 Oak Ave, Anytown USA', email: 'bob.johnson@example.com' },
-    educationalBackground: { highestQualification: 'B.A. Marketing', institution: 'Community College', yearOfCompletion: '2020' },
-    statementOfPurpose: 'I want to enhance my marketing skills with digital strategies.',
-    status: 'approved',
-    referenceNumber: 'LF20240002',
-    submissionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
-  },
+  // {
+  //   id: 'app-1', // Will be _id from MongoDB
+  //   userId: 'student-1-db-id', // Reference to User _id
+  //   programId: 'prog-1-db-id', // Reference to Program _id
+  //   personalDetails: { firstName: 'Alice', lastName: 'Smith', dateOfBirth: '1995-03-15', phone: '555-1234', address: '123 Main St, Anytown USA' },
+  //   educationalBackground: { highestQualification: 'B.Sc. Computer Science', institution: 'State University', yearOfCompletion: '2017' },
+  //   statementOfPurpose: 'I am passionate about web development and wish to transition my career into this field.',
+  //   status: 'pending',
+  //   referenceNumber: 'LF20240001',
+  //   submissionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+  // },
+  // {
+  //   id: 'app-2',
+  //   userId: 'student-2-db-id',
+  //   programId: 'prog-2-db-id',
+  //   personalDetails: { firstName: 'Bob', lastName: 'Johnson', dateOfBirth: '1998-07-22', phone: '555-5678', address: '456 Oak Ave, Anytown USA' },
+  //   educationalBackground: { highestQualification: 'B.A. Marketing', institution: 'Community College', yearOfCompletion: '2020' },
+  //   statementOfPurpose: 'I want to enhance my marketing skills with digital strategies.',
+  //   status: 'approved',
+  //   referenceNumber: 'LF20240002',
+  //   submissionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+  // },
 ];
 
-export const PROGRAM_CATEGORIES = ['All', 'Technology', 'Marketing', 'Data Science', 'Business', 'Creative Arts', 'Photography', 'Project Management', 'Cybersecurity', 'Cloud Computing'];
+export const PROGRAM_CATEGORIES = ['All', 'Technology', 'Marketing', 'Data Science', 'Business', 'Creative Arts', 'Cybersecurity', 'Cloud Computing', 'Engineering', 'Culinary Arts', 'Languages', 'Music Production', 'Health & Wellness'];
 export const PROGRAM_DURATIONS = ['All', 'Under 3 Months', '3-6 Months', '6-9 Months', 'Over 9 Months'];
 
 export function getDurationCategory(duration: string): string {
@@ -412,6 +658,8 @@ export function getDurationCategory(duration: string): string {
   if (weeksMatch) {
     const numWeeks = parseInt(weeksMatch[1], 10);
     if (numWeeks < 12) return 'Under 3 Months'; // Approx 3 months
+    if (numWeeks < 24) return '3-6 Months'; // Approx 6 months
+    // Add more week categories if needed or map to month categories
   }
   
   if (monthsMatch) {
@@ -421,7 +669,7 @@ export function getDurationCategory(duration: string): string {
     if (numMonths <= 9) return '6-9 Months';
     return 'Over 9 Months';
   }
-  return 'Over 9 Months'; // Default for "1 Year" etc. or if no match
+  // Default for durations like "1 Year" or if no match
+  if (duration.toLowerCase().includes('year')) return 'Over 9 Months';
+  return 'All'; 
 }
-
-    

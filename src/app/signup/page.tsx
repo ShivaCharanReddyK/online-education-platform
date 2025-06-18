@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from 'next/link';
-import { UserPlus, GraduationCap, Briefcase } from 'lucide-react';
+import { UserPlus, GraduationCap, Briefcase, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/shared/MainLayout';
 
@@ -20,7 +20,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'student' | 'counselor'>('student');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth(); // Using login for signup simplicity in mock
+  const { signup } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -35,18 +35,15 @@ export default function SignupPage() {
       return;
     }
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    if (email && password) { // Basic validation
-        // In a real app, you'd call a signup API endpoint here.
-        // For mock purposes, we'll just log the user in.
-        login(email, role); 
+    const result = await signup(email, password, role);
+    
+    if (result.success && result.user) {
         toast({
             title: "Signup Successful",
-            description: `Welcome, ${email}! Your account has been created.`,
+            description: `Welcome, ${result.user.email}! Your account has been created.`,
         });
-        if (role === 'counselor') {
+        if (result.user.role === 'counselor') {
             router.push('/counselor/dashboard');
         } else {
             router.push('/dashboard');
@@ -54,7 +51,7 @@ export default function SignupPage() {
     } else {
          toast({
             title: "Signup Failed",
-            description: "Please fill in all fields.",
+            description: result.message || "Please fill in all fields correctly.",
             variant: "destructive",
         });
     }
@@ -63,7 +60,7 @@ export default function SignupPage() {
 
   return (
     <MainLayout>
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4">
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4 min-h-[calc(100vh-var(--header-height)-var(--footer-height))]">
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center">
             <div className="inline-block mx-auto p-3 bg-primary rounded-full mb-4">
@@ -96,6 +93,7 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  minLength={6} // Basic password policy
                 />
               </div>
               <div className="space-y-2">
@@ -126,7 +124,7 @@ export default function SignupPage() {
                 </RadioGroup>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating Account...' : 'Sign Up'}
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Sign Up'}
               </Button>
             </form>
           </CardContent>

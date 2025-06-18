@@ -1,9 +1,8 @@
 
-"use client"; // This page uses client-side data fetching (mock) and interactivity
+"use client";
 
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/shared/MainLayout';
-import { DUMMY_PROGRAMS } from '@/lib/constants';
 import type { Program } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,8 @@ import { CalendarDays, Clock, Tag, CheckCircle, BookOpen, Users, GraduationCap, 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { getProgramById } from '@/actions/programActions';
+import { DUMMY_PROGRAMS } from '@/lib/constants'; // For fallback type if needed
 
 export default function ProgramDetailPage({ params }: { params: { id: string } }) {
   const [program, setProgram] = useState<Program | null>(null);
@@ -21,22 +22,41 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
   const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate fetching program data
     setIsLoading(true);
-    const foundProgram = DUMMY_PROGRAMS.find(p => p.id === params.id);
-    setTimeout(() => { // Simulate network delay
-      if (foundProgram) {
-        setProgram(foundProgram);
-      } else {
+    async function fetchProgram() {
+      try {
+        const fetchedProgram = await getProgramById(params.id);
+        if (fetchedProgram) {
+          setProgram(fetchedProgram);
+        } else {
+          toast({
+            title: "Error",
+            description: "Program not found.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch program details:", error);
         toast({
           title: "Error",
-          description: "Program not found.",
+          description: "Could not load program details.",
           variant: "destructive",
         });
-        // Potentially redirect or show a proper not found component
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }, 500);
+    }
+
+    if (params.id) {
+      fetchProgram();
+    } else {
+        setIsLoading(false); // No ID, no fetch
+         toast({
+            title: "Error",
+            description: "Program ID is missing.",
+            variant: "destructive",
+        });
+    }
   }, [params.id, toast]);
 
   if (isLoading) {
@@ -66,11 +86,10 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
   return (
     <MainLayout>
       <div className="container mx-auto py-8 md:py-12 px-4 md:px-6">
-        {/* Header Section */}
         <section className="mb-12">
           <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden shadow-xl">
             <Image
-              src={program.imageUrl}
+              src={program.imageUrl || "https://placehold.co/1200x600.png"}
               alt={program.title}
               data-ai-hint={program.aiHint || 'education online learning'}
               layout="fill"
@@ -86,7 +105,6 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-          {/* Main Content */}
           <main className="lg:col-span-2 space-y-8">
             <Card className="shadow-lg">
               <CardHeader>
@@ -138,9 +156,8 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
             )}
           </main>
 
-          {/* Sidebar */}
           <aside className="lg:col-span-1 space-y-6">
-            <Card className="shadow-lg sticky top-20"> {/* Sticky sidebar */}
+            <Card className="shadow-lg sticky top-20">
               <CardHeader className="bg-primary/5">
                 <div className="flex items-center text-primary mb-2">
                    <GraduationCap className="h-8 w-8 mr-3" />
@@ -176,7 +193,7 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
                   <Users className="mr-3 h-5 w-5 text-primary" />
                   <div>
                     <p className="font-semibold">Format</p>
-                    <p className="text-muted-foreground">100% Online</p>
+                    <p className="text-muted-foreground">100% Online</p> {/* Assuming static for now */}
                   </div>
                 </div>
                 <Separator />

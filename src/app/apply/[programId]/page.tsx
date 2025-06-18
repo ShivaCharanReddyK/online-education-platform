@@ -4,29 +4,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/shared/MainLayout';
-import { DUMMY_PROGRAMS } from '@/lib/constants';
 import type { Program, Application } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Send, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import Link from 'next/link';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-
+import { getProgramById } from '@/actions/programActions';
+import { createApplicationAction } from '@/actions/applicationActions';
 
 const applicationSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters."),
   lastName: z.string().min(2, "Last name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
-  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date."),
+  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date format. Please use YYYY-MM-DD."),
   phone: z.string().min(10, "Phone number must be at least 10 digits."),
   address: z.string().min(5, "Address is too short."),
   highestQualification: z.string().min(2, "Qualification is required."),
@@ -51,7 +50,7 @@ export default function ApplyPage({ params }: { params: { programId: string } })
     defaultValues: {
       firstName: '',
       lastName: '',
-      email: user?.email || '',
+      email: '', // Will be set from user context
       dateOfBirth: '',
       phone: '',
       address: '',
@@ -62,42 +61,52 @@ export default function ApplyPage({ params }: { params: { programId: string } })
     },
   });
 
-  useEffect(() => {
+   useEffect(() => {
     if (!authLoading && !user) {
       toast({ title: "Authentication Required", description: "Please log in to apply for a program.", variant: "destructive" });
       router.push(`/login?redirect=/apply/${params.programId}`);
-    } else if (user) {
+    } else if (user && user.email && form.getValues('email') !== user.email) {
+       // Set user's email in the form once user data is available
       form.reset({ ...form.getValues(), email: user.email });
     }
   }, [user, authLoading, router, params.programId, toast, form]);
 
   useEffect(() => {
-    setIsLoadingProgram(true);
-    const foundProgram = DUMMY_PROGRAMS.find(p => p.id === params.programId);
-    setTimeout(() => { // Simulate network delay
-      if (foundProgram) {
-        setProgram(foundProgram);
-      } else {
-        toast({ title: "Error", description: "Program not found.", variant: "destructive" });
+    async function fetchProgram() {
+      setIsLoadingProgram(true);
+      try {
+        const foundProgram = await getProgramById(params.programId);
+        if (foundProgram) {
+          setProgram(foundProgram);
+        } else {
+          toast({ title: "Error", description: "Program not found.", variant: "destructive" });
+          router.push('/programs');
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load program details.", variant: "destructive" });
         router.push('/programs');
+      } finally {
+        setIsLoadingProgram(false);
       }
-      setIsLoadingProgram(false);
-    }, 500);
+    }
+    if (params.programId) {
+        fetchProgram();
+    }
   }, [params.programId, toast, router]);
 
   const onSubmit = async (data: ApplicationFormData) => {
-    if (!user) {
+    if (!user || !user.id) {
         toast({ title: "Error", description: "You must be logged in to submit an application.", variant: "destructive" });
         return;
     }
-    setIsSubmitting(true);
-    // Simulate API call for submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (!program || !program.id) {
+        toast({ title: "Error", description: "Program details are not available.", variant: "destructive" });
+        return;
+    }
 
-    const newApplication: Application = {
-        id: `app-${Date.now()}`,
-        userId: user.id,
-        programId: params.programId,
+    setIsSubmitting(true);
+    
+    const applicationDataForAction = {
         personalDetails: {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -111,22 +120,26 @@ export default function ApplyPage({ params }: { params: { programId: string } })
             yearOfCompletion: data.yearOfCompletion,
         },
         statementOfPurpose: data.statementOfPurpose,
-        status: 'pending',
-        referenceNumber: `LF${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`,
-        submissionDate: new Date().toISOString(),
     };
-    
-    // In a real app, you'd save this to your DB. We'll store in localStorage for demo.
-    const existingApplications = JSON.parse(localStorage.getItem('learnflow-applications') || '[]');
-    localStorage.setItem('learnflow-applications', JSON.stringify([...existingApplications, newApplication]));
 
-    setApplicationSubmitted(newApplication);
-    setIsSubmitting(false);
-    toast({
-      title: "Application Submitted!",
-      description: `Your application for ${program?.title} has been received. Reference: ${newApplication.referenceNumber}`,
-      duration: 7000,
-    });
+    try {
+        const newApplication = await createApplicationAction(program.id, user.id, applicationDataForAction);
+        if (newApplication) {
+            setApplicationSubmitted(newApplication);
+            toast({
+            title: "Application Submitted!",
+            description: `Your application for ${program?.title} has been received. Reference: ${newApplication.referenceNumber}`,
+            duration: 7000,
+            });
+        } else {
+            throw new Error("Application creation failed.");
+        }
+    } catch (error) {
+        console.error("Application submission error:", error);
+        toast({ title: "Submission Error", description: (error as Error).message || "Could not submit your application. Please try again.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   if (authLoading || isLoadingProgram) {
@@ -140,7 +153,6 @@ export default function ApplyPage({ params }: { params: { programId: string } })
   }
 
   if (!user) {
-     // Should be redirected by useEffect, but this is a fallback.
     return (
       <MainLayout>
         <div className="container mx-auto py-12 px-4 md:px-6 text-center">
@@ -157,7 +169,6 @@ export default function ApplyPage({ params }: { params: { programId: string } })
   }
 
   if (!program) {
-    // Should be redirected by useEffect, but this is a fallback.
     return (
       <MainLayout>
         <div className="container mx-auto py-12 px-4 md:px-6 text-center">
@@ -288,7 +299,7 @@ export default function ApplyPage({ params }: { params: { programId: string } })
                 <Info className="h-4 w-4" />
                 <AlertTitle>AI Program Recommendation</AlertTitle>
                 <AlertDescription>
-                  Your statement of purpose can also be used by our AI to recommend other programs if this one isn't the best fit, or if your application is denied.
+                  Your statement of purpose can also be used by our AI to recommend other programs if this one isn&apos;t the best fit, or if your application is denied.
                 </AlertDescription>
               </Alert>
 

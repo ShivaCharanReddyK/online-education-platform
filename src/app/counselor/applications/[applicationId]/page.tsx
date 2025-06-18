@@ -1,12 +1,11 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MainLayout } from '@/components/shared/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import type { Application, Program, AIRecommendationOutput } from '@/types';
-import { DUMMY_APPLICATIONS, DUMMY_PROGRAMS } from '@/lib/constants';
+import type { Application, Program, AIRecommendationOutput } from '@/types'; // AIRecommendationOutput name changed
 import { AIProgramRecommender } from '@/components/application/AIProgramRecommender';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Loader2, UserCircle, BookOpen, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getApplicationById, updateApplicationStatusAction, getProgramForApplication } from '@/actions/applicationActions';
+import { getUserById } from '@/actions/userActions';
+
 
 export default function ApplicationReviewPage({ params }: { params: { applicationId: string } }) {
   const { user, loading: authLoading } = useAuth();
@@ -25,11 +27,12 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
   const { toast } = useToast();
   const [application, setApplication] = useState<Application | null>(null);
   const [program, setProgram] = useState<Program | null>(null);
+  const [applicant, setApplicant] = useState<any>(null); // Using 'any' for simplicity, should be User type
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [denialReason, setDenialReason] = useState('');
   const [showDenialDialog, setShowDenialDialog] = useState(false);
-  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendationOutput | null>(null);
+  const [aiRecommendationOutput, setAiRecommendationOutput] = useState<AIRecommendationOutput | null>(null);
 
 
   useEffect(() => {
@@ -41,67 +44,70 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
     }
   }, [user, authLoading, router, params.applicationId, toast]);
 
-  useEffect(() => {
-    if (user && user.role === 'counselor') {
+  const fetchApplicationData = useCallback(async () => {
+    if (user && user.role === 'counselor' && params.applicationId) {
       setIsLoadingData(true);
-      // Simulate fetching application data
-      setTimeout(() => {
-        const allApplications = [
-            ...DUMMY_APPLICATIONS,
-            ...JSON.parse(localStorage.getItem('learnflow-applications') || '[]')
-                .filter((storedApp: Application) => !DUMMY_APPLICATIONS.find(da => da.id === storedApp.id))
-        ];
-        const foundApp = allApplications.find((app: Application) => app.id === params.applicationId);
-        
+      try {
+        const foundApp = await getApplicationById(params.applicationId);
         if (foundApp) {
           setApplication(foundApp);
-          const foundProgram = DUMMY_PROGRAMS.find(p => p.id === foundApp.programId);
-          setProgram(foundProgram || null);
+          if (foundApp.programId) {
+            const foundProgram = await getProgramForApplication(foundApp.programId);
+            setProgram(foundProgram || null);
+          }
+          if (foundApp.userId) {
+             // Fetch applicant details (e.g., email) if not on application doc
+            const appUser = await getUserById(foundApp.userId);
+            setApplicant(appUser);
+          }
         } else {
           toast({ title: "Error", description: "Application not found.", variant: "destructive"});
           router.push('/counselor/dashboard');
         }
+      } catch (error) {
+        console.error("Failed to fetch application data:", error);
+        toast({ title: "Error", description: "Could not load application details.", variant: "destructive"});
+      } finally {
         setIsLoadingData(false);
-      }, 1000);
+      }
     }
   }, [user, params.applicationId, router, toast]);
 
-  const updateApplicationStatus = (status: 'approved' | 'denied', reason?: string) => {
-    if (!application) return;
+  useEffect(() => {
+    fetchApplicationData();
+  }, [fetchApplicationData]);
+
+  const handleUpdateStatus = async (status: 'approved' | 'denied') => {
+    if (!application || !application.id) return;
     setIsProcessing(true);
-    // Simulate API call
-    setTimeout(() => {
-      const updatedApp = { ...application, status, denialReason: reason };
-      setApplication(updatedApp);
+    
+    let recommendedProgramsForEmail: string[] | undefined = undefined;
+    if (status === 'denied' && aiRecommendationOutput) {
+        recommendedProgramsForEmail = aiRecommendationOutput.programRecommendations;
+    }
 
-      // Update in localStorage for demo
-      let storedApps: Application[] = JSON.parse(localStorage.getItem('learnflow-applications') || '[]');
-      const appIndex = storedApps.findIndex(a => a.id === application.id);
-      if (appIndex > -1) {
-        storedApps[appIndex] = updatedApp;
+    try {
+      const updatedApp = await updateApplicationStatusAction(application.id, status, denialReason, recommendedProgramsForEmail);
+      if (updatedApp) {
+        setApplication(updatedApp);
+        toast({
+          title: `Application ${status === 'approved' ? 'Approved' : 'Denied'}`,
+          description: `The application has been successfully updated. An email notification ${status === 'approved' ? 'will be sent.' : 'with feedback and recommendations will be sent.'}`,
+        });
+        if (status === 'denied') setShowDenialDialog(false);
       } else {
-        storedApps.push(updatedApp); // Should not happen if app was found initially
+        throw new Error("Failed to update application status.");
       }
-      localStorage.setItem('learnflow-applications', JSON.stringify(storedApps));
-      
-      // Also update DUMMY_APPLICATIONS if it's there (for non-localStorage ones)
-      const dummyAppIndex = DUMMY_APPLICATIONS.findIndex(a => a.id === application.id);
-      if (dummyAppIndex > -1) {
-        DUMMY_APPLICATIONS[dummyAppIndex] = updatedApp;
-      }
-
-
-      toast({
-        title: `Application ${status === 'approved' ? 'Approved' : 'Denied'}`,
-        description: `The application has been successfully updated. An email notification ${status === 'approved' ? 'will be sent.' : 'with feedback and recommendations will be sent.'}`,
-      });
+    } catch (error) {
+      console.error("Error updating application status:", error);
+      toast({ title: "Update Error", description: (error as Error).message || "Could not update application status.", variant: "destructive"});
+    } finally {
       setIsProcessing(false);
-      if (status === 'denied') setShowDenialDialog(false);
-    }, 1500);
+    }
   };
 
   const handleApprove = () => {
-    updateApplicationStatus('approved');
+    handleUpdateStatus('approved');
   };
 
   const handleDenySubmit = () => {
@@ -109,7 +115,7 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
         toast({title: "Error", description: "Please provide a reason for denial.", variant: "destructive"});
         return;
     }
-    updateApplicationStatus('denied', denialReason);
+    handleUpdateStatus('denied');
   };
 
 
@@ -122,12 +128,28 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
       </MainLayout>
     );
   }
+  
+  if (!user || !application || !program) {
+      // Redirect or show error if essential data is missing after loading
+      // This case should ideally be handled by the loading logic or useEffects pushing to dashboard/login
+       return (
+        <MainLayout>
+            <div className="container mx-auto py-12 px-4 md:px-6 text-center">
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Data Error</AlertTitle>
+                    <AlertDescription>Could not load necessary application or program data. Please try again.</AlertDescription>
+                    <Button onClick={() => router.push('/counselor/dashboard')} className="mt-4">Back to Dashboard</Button>
+                </Alert>
+            </div>
+        </MainLayout>
+       );
+  }
 
-  if (!user || !application || !program) return null; // Should be redirected or error handled by useEffect
 
   const applicationDetails = [
     { label: "Full Name", value: `${application.personalDetails.firstName} ${application.personalDetails.lastName}` },
-    { label: "Email", value: DUMMY_APPLICATIONS.find(a=>a.id === application.id)?.personalDetails.email || 'student@example.com' /* Placeholder */ },
+    { label: "Email", value: application.applicantEmail || applicant?.email || 'N/A' },
     { label: "Date of Birth", value: new Date(application.personalDetails.dateOfBirth).toLocaleDateString() },
     { label: "Phone", value: application.personalDetails.phone },
     { label: "Address", value: application.personalDetails.address },
@@ -197,6 +219,19 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
                 <p className="text-md leading-relaxed whitespace-pre-wrap">{application.statementOfPurpose}</p>
               </CardContent>
             </Card>
+             {application.status === 'denied' && application.aiRecommendedPrograms && application.aiRecommendedPrograms.length > 0 && (
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-headline flex items-center"><Lightbulb className="mr-3 h-6 w-6 text-yellow-500" /> AI Suggested Alternatives</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-2">The following programs were suggested to the applicant:</p>
+                        <ul className="list-disc list-inside">
+                            {application.aiRecommendedPrograms.map((prog, index) => <li key={index}>{prog}</li>)}
+                        </ul>
+                    </CardContent>
+                </Card>
+            )}
           </div>
 
           <aside className="lg:col-span-1 space-y-6">
@@ -243,10 +278,10 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
                             compact
                             initialValues={{
                                 background: `${application.educationalBackground.highestQualification} from ${application.educationalBackground.institution}`,
-                                interests: "Related to applied program", // Generic placeholder
+                                interests: "Related to applied program", 
                                 statementOfPurpose: application.statementOfPurpose
                             }}
-                            onRecommendation={setAiRecommendation}
+                            onRecommendation={setAiRecommendationOutput}
                            />
                         </div>
                         <DialogFooter>
@@ -286,4 +321,3 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
     </MainLayout>
   );
 }
-

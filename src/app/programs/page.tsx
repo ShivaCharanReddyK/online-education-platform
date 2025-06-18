@@ -1,21 +1,25 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/shared/MainLayout';
 import { ProgramCard } from '@/components/programs/ProgramCard';
 import { ProgramFilter } from '@/components/programs/ProgramFilter';
-import { DUMMY_PROGRAMS, getDurationCategory } from '@/lib/constants';
+import { getDurationCategory, DUMMY_PROGRAMS as FallbackPrograms } from '@/lib/constants'; // Keep DUMMY for fallback/structure
 import type { Program } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, SearchX } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { getAllPrograms } from '@/actions/programActions';
 
 const ITEMS_PER_PAGE = 6;
 
 export default function ProgramsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [allPrograms, setAllPrograms] = useState<Program[]>([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
 
   const [filters, setFilters] = useState(() => {
     return {
@@ -27,7 +31,26 @@ export default function ProgramsPage() {
   });
   
   const [displayedItems, setDisplayedItems] = useState(ITEMS_PER_PAGE);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false); // For load more button state
+
+  const fetchPrograms = useCallback(async () => {
+    setIsLoadingPrograms(true);
+    try {
+      // Pass current filters to backend if backend supports it
+      // For now, getAllPrograms might do basic filtering or we filter client-side more heavily
+      const programs = await getAllPrograms(filters);
+      setAllPrograms(programs);
+    } catch (error) {
+      console.error("Failed to fetch programs:", error);
+      setAllPrograms(FallbackPrograms); // Fallback to dummy data on error
+    }
+    setIsLoadingPrograms(false);
+  }, [filters]); // Add filters as dependency
+
+  useEffect(() => {
+    fetchPrograms();
+  }, [fetchPrograms]);
+
 
   useEffect(() => {
     // Update URL when filters change
@@ -37,18 +60,29 @@ export default function ProgramsPage() {
     if (filters.startDate) params.set('startDate', filters.startDate);
     if (filters.searchTerm) params.set('searchTerm', filters.searchTerm);
     router.replace(`/programs?${params.toString()}`, { scroll: false });
+
+    // Re-fetch or re-filter when filters change
+    // If backend handles filtering, re-fetch:
+    // fetchPrograms(); 
+    // If client-side filtering is primary, no need to re-fetch all, filteredPrograms memo will update.
+    // Since getAllPrograms now accepts filters, we should re-fetch.
+    // The useEffect with fetchPrograms as dependency (which has filters in its dep array) handles this.
+
   }, [filters, router]);
 
 
   const handleFilterChange = (newFilters: typeof filters) => {
     setFilters(newFilters);
     setDisplayedItems(ITEMS_PER_PAGE); // Reset pagination
+    // fetchPrograms will be called by the useEffect above
   };
 
   const filteredPrograms = useMemo(() => {
-    return DUMMY_PROGRAMS.filter(program => {
+    // Client-side filtering as a fallback or primary method if backend filtering is limited
+    return allPrograms.filter(program => {
       const categoryMatch = filters.category === 'All' || program.category === filters.category;
-      const durationMatch = filters.duration === 'All' || getDurationCategory(program.duration) === filters.duration;
+      // Ensure getDurationCategory is robust for potentially undefined program.duration
+      const durationMatch = filters.duration === 'All' || (program.duration && getDurationCategory(program.duration) === filters.duration);
       const startDateMatch = !filters.startDate || new Date(program.startDate) >= new Date(filters.startDate);
       const searchTermMatch = !filters.searchTerm || 
         program.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -56,17 +90,28 @@ export default function ProgramsPage() {
         program.category.toLowerCase().includes(filters.searchTerm.toLowerCase());
       return categoryMatch && durationMatch && startDateMatch && searchTermMatch;
     });
-  }, [filters]);
+  }, [filters, allPrograms]);
 
   const currentPrograms = filteredPrograms.slice(0, displayedItems);
 
   const loadMore = () => {
-    setIsLoading(true);
-    setTimeout(() => { // Simulate network delay
+    setIsFiltering(true); // Use isFiltering for load more button state
+    setTimeout(() => { // Simulate network delay if any, though items are already fetched
       setDisplayedItems(prev => prev + ITEMS_PER_PAGE);
-      setIsLoading(false);
-    }, 500);
+      setIsFiltering(false);
+    }, 300);
   };
+  
+  if (isLoadingPrograms && allPrograms.length === 0) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-12 px-4 md:px-6 flex justify-center items-center min-h-[calc(100vh-10rem)]">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <p className="ml-4 text-lg">Loading programs...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -98,8 +143,8 @@ export default function ProgramsPage() {
 
             {filteredPrograms.length > displayedItems && (
               <div className="mt-8 text-center">
-                <Button onClick={loadMore} disabled={isLoading} size="lg">
-                  {isLoading ? (
+                <Button onClick={loadMore} disabled={isFiltering} size="lg">
+                  {isFiltering ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Loading...

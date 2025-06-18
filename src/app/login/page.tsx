@@ -3,14 +3,14 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from 'next/link';
-import { LogIn, GraduationCap, Briefcase } from 'lucide-react';
+import { LogIn, GraduationCap, Briefcase, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/shared/MainLayout';
 
@@ -21,28 +21,34 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (email && password) { // Basic validation for demo
-        login(email, role);
+    
+    const result = await login(email, password, role);
+
+    if (result.success && result.user) {
         toast({
             title: "Login Successful",
-            description: `Welcome back, ${email}!`,
+            description: `Welcome back, ${result.user.email}!`,
         });
-        if (role === 'counselor') {
-            router.push('/counselor/dashboard');
+        const redirectUrl = searchParams.get('redirect');
+        if (redirectUrl) {
+            router.push(redirectUrl);
         } else {
-            router.push('/dashboard');
+            if (result.user.role === 'counselor') {
+                router.push('/counselor/dashboard');
+            } else {
+                router.push('/dashboard');
+            }
         }
     } else {
         toast({
             title: "Login Failed",
-            description: "Please enter valid credentials.",
+            description: result.message || "Please enter valid credentials.",
             variant: "destructive",
         });
     }
@@ -51,7 +57,7 @@ export default function LoginPage() {
 
   return (
     <MainLayout>
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4">
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-4 min-h-[calc(100vh-var(--header-height)-var(--footer-height))]">
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center">
             <div className="inline-block mx-auto p-3 bg-primary rounded-full mb-4">
@@ -102,7 +108,7 @@ export default function LoginPage() {
                 </RadioGroup>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Log In'}
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
               </Button>
             </form>
           </CardContent>
