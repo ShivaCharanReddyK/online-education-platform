@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Loader2, UserCircle, BookOpen, FileText, MessageSquare, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, UserCircle, BookOpen, FileText, MessageSquare, AlertTriangle, Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getApplicationById, updateApplicationStatusAction, getProgramForApplication } from '@/actions/applicationActions';
 import { getUserById } from '@/actions/userActions';
