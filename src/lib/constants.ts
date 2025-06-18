@@ -10,7 +10,7 @@ export const DUMMY_PROGRAMS: Program[] = [
     duration: '6 Months',
     startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Approx 1 month from now
     imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'coding computer',
+    aiHint: 'laptop code',
     features: ['JavaScript, React, Node.js', 'Real-world projects', 'Career support'],
     tuitionFee: 5000,
     longDescription: 'Our Full-Stack Web Development Bootcamp is an intensive program designed to equip you with the skills needed to build modern web applications. You will master both front-end and back-end development, working with popular technologies like React, Node.js, Express, and MongoDB. The curriculum includes hands-on projects, collaborative coding sessions, and mentorship from industry experts.',
@@ -37,7 +37,7 @@ export const DUMMY_PROGRAMS: Program[] = [
     duration: '3 Months',
     startDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // Approx 2 months from now
     imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'marketing analytics',
+    aiHint: 'dashboard marketing',
     features: ['Google Ads & Analytics certified', 'Hands-on campaigns', 'Industry case studies'],
     tuitionFee: 3000,
     longDescription: 'The Digital Marketing Specialist Program offers a comprehensive dive into the world of online marketing. Learn to create effective strategies, run successful campaigns, and analyze performance using cutting-edge tools and techniques. This program covers SEO, SEM, social media marketing, email marketing, content creation, and analytics.',
@@ -64,7 +64,7 @@ export const DUMMY_PROGRAMS: Program[] = [
     duration: '9 Months',
     startDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // Approx 1.5 months from now
     imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'data charts',
+    aiHint: 'network visualization',
     features: ['Python, R, TensorFlow, Scikit-learn', 'Capstone project', 'Expert instructors'],
     tuitionFee: 7500,
     longDescription: 'This certificate program in Data Science & Machine Learning provides a rigorous foundation in statistical analysis, data visualization, and machine learning techniques. Students will learn to use Python and R to manipulate data, build predictive models, and derive insights from complex datasets. The program culminates in a capstone project where students apply their skills to a real-world problem.',
@@ -91,7 +91,7 @@ export const DUMMY_PROGRAMS: Program[] = [
     duration: '7 Months',
     startDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(), // Approx 2.5 months from now
     imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'security shield',
+    aiHint: 'server security',
     features: ['Hands-on labs', 'Industry-recognized tools', 'Preparation for CompTIA Security+'],
     tuitionFee: 6000,
     longDescription: 'Our Cybersecurity Analyst Training program prepares you for a career in the fast-growing field of cybersecurity. You will gain practical skills in threat detection, vulnerability assessment, network security, ethical hacking, and incident response. The curriculum is aligned with industry best practices and prepares you for certifications like CompTIA Security+.',
@@ -151,3 +151,4 @@ export function getDurationCategory(duration: string): string {
   }
   return 'Over 9 Months'; // Default for "1 Year" etc.
 }
+
