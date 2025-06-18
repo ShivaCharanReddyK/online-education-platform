@@ -15,15 +15,18 @@ import { DollarSign, CheckCircle, AlertTriangle, Clock, Loader2, FileText, Credi
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { getApplicationsByUserId } from '@/actions/applicationActions';
-import { getProgramById } from '@/actions/programActions'; // To fetch program details like tuition
+import { getProgramById } from '@/actions/programActions';
 
-// Placeholder for payment actions - In a real app, these would interact with a payment gateway
+// Mock payments storage (in-memory for server actions or localStorage on client)
+// For this page, we'll keep it client-side using useState and simulate interaction.
+let MOCK_PAYMENTS_DB: Payment[] = [];
+
+
 async function createPaymentAction(applicationId: string, userId: string, amount: number, paymentMethod: 'full' | 'plan'): Promise<Payment> {
   console.log(`Simulating payment for application ${applicationId}, amount ${amount}, method ${paymentMethod}`);
-  // In a real app, this would save to a Payments collection in DB and interact with Stripe/PayPal etc.
-  return {
-    id: `pay-${Date.now()}`, // Temporary ID
-    _id: new (await import('mongodb')).ObjectId(), // Placeholder
+  
+  const newPayment: Payment = {
+    id: `pay-${Date.now()}`,
     applicationId,
     userId,
     amount,
@@ -32,13 +35,20 @@ async function createPaymentAction(applicationId: string, userId: string, amount
     paymentMethod,
     transactionId: `txn_${Date.now()}`
   };
+  // Update our mock DB
+  const existingPaymentIndex = MOCK_PAYMENTS_DB.findIndex(p => p.applicationId === applicationId);
+  if (existingPaymentIndex > -1) {
+    MOCK_PAYMENTS_DB[existingPaymentIndex] = newPayment;
+  } else {
+    MOCK_PAYMENTS_DB.push(newPayment);
+  }
+  return JSON.parse(JSON.stringify(newPayment));
 }
 
 async function getPaymentsByUserId(userId: string): Promise<Payment[]> {
-    // This would fetch from a payments collection. For now, returning empty or mock.
-    console.log("Fetching payments for user", userId);
-    // Simulate some payments if needed for demo, or integrate with a payments collection
-    return [];
+    console.log("Fetching mock payments for user", userId);
+    const userPayments = MOCK_PAYMENTS_DB.filter(p => p.userId === userId);
+    return JSON.parse(JSON.stringify(userPayments));
 }
 
 
@@ -67,7 +77,6 @@ export default function StudentDashboardPage() {
         const userApplications = await getApplicationsByUserId(user.id);
         setApplications(userApplications);
 
-        // Fetch program details for tuition fees & titles if not on application
         const newProgramsCache = { ...programsCache };
         for (const app of userApplications) {
           if (app.programId && !newProgramsCache[app.programId]) {
@@ -79,26 +88,26 @@ export default function StudentDashboardPage() {
         }
         setProgramsCache(newProgramsCache);
         
-        // Fetch user payments (mocked for now)
-        const userPayments = await getPaymentsByUserId(user.id); // This would be a DB call
-        // Simulate payments for approved applications if not fetched from DB
-        const simulatedPayments = userApplications
-          .filter(app => app.status === 'approved' && !userPayments.find(p => p.applicationId === app.id))
-          .map(app => {
-             const programTuition = newProgramsCache[app.programId]?.tuitionFee || 5000; // Default if not found
-             return {
-                id: `pay-sim-${app.id}`,
-                _id: new (require('mongodb')).ObjectId(), // Placeholder for new ObjectId()
-                applicationId: app.id!,
-                userId: user.id!,
-                amount: programTuition,
-                paymentDate: new Date().toISOString(), 
-                status: 'pending', 
-                paymentMethod: 'full', // Default
-             } as Payment;
-          });
+        const userPayments = await getPaymentsByUserId(user.id);
+        
+        // Initialize pending payments based on approved apps not yet paid
+        const currentAppPayments: Payment[] = [...userPayments];
+        userApplications.forEach(app => {
+            if (app.status === 'approved' && !currentAppPayments.find(p => p.applicationId === app.id)) {
+                const programTuition = newProgramsCache[app.programId]?.tuitionFee || 5000;
+                currentAppPayments.push({
+                    id: `pay-sim-${app.id}`,
+                    applicationId: app.id!,
+                    userId: user.id!,
+                    amount: programTuition,
+                    paymentDate: new Date().toISOString(), 
+                    status: 'pending', 
+                    paymentMethod: 'full', 
+                });
+            }
+        });
+        setPayments(currentAppPayments);
 
-        setPayments([...userPayments, ...simulatedPayments]);
 
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
@@ -107,7 +116,7 @@ export default function StudentDashboardPage() {
         setIsLoadingData(false);
       }
     }
-  }, [user, toast, programsCache]); // programsCache added to dependencies
+  }, [user, toast, programsCache]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -138,10 +147,14 @@ export default function StudentDashboardPage() {
         return;
     }
 
-    setIsLoadingData(true); // Use this to show loading state during payment
+    setIsLoadingData(true);
     try {
       const newPayment = await createPaymentAction(applicationId, user.id, amount, paymentMethod);
-      setPayments(prevPayments => [...prevPayments.filter(p => p.applicationId !== applicationId), newPayment]);
+      setPayments(prevPayments => {
+          const updatedPayments = prevPayments.filter(p => p.applicationId !== applicationId);
+          updatedPayments.push(newPayment);
+          return updatedPayments;
+      });
       toast({
         title: "Payment Successful!",
         description: `Your ${paymentMethod} payment has been processed.`,

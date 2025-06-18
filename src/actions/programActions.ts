@@ -1,63 +1,54 @@
 
 'use server';
 
-import { getProgramsCollection, getDb } from '@/lib/mongodb';
 import type { Program } from '@/types';
-import { DUMMY_PROGRAMS as seedPrograms } from '@/lib/constants'; // For seeding
-import { ObjectId } from 'mongodb';
+import { DUMMY_PROGRAMS as seedPrograms } from '@/lib/constants';
 
-// Function to seed programs if the collection is empty
-export async function seedProgramsIfEmpty(): Promise<void> {
-  const programsCollection = await getProgramsCollection();
-  const count = await programsCollection.countDocuments();
-  if (count === 0) {
-    console.log('Programs collection is empty, seeding data...');
-    // Remove any potential _id from seed data as MongoDB will generate them
-    const programsToInsert = seedPrograms.map(({ id, ...rest }) => ({ ...rest, startDate: new Date(rest.startDate).toISOString() }));
-    await programsCollection.insertMany(programsToInsert as any[]); // Cast to any because of _id
-    console.log(`${programsToInsert.length} programs seeded.`);
-  }
-}
+let programsCache: Program[] = seedPrograms.map((p, index) => ({
+    ...p,
+    id: `prog-${index + 1}`, // Ensure dummy programs have string IDs
+    startDate: new Date(p.startDate).toISOString() // Ensure date is string
+}));
+
 
 export async function getAllPrograms(filters?: { category?: string; duration?: string; startDate?: string; searchTerm?: string }): Promise<Program[]> {
-  await seedProgramsIfEmpty(); // Ensure data exists for demo
-  const programsCollection = await getProgramsCollection();
-  
-  const query: any = {};
+  // Basic filtering for mock data
+  let filteredPrograms = [...programsCache];
+
   if (filters) {
     if (filters.category && filters.category !== 'All') {
-      query.category = filters.category;
+      filteredPrograms = filteredPrograms.filter(p => p.category === filters.category);
     }
-    // Duration filtering needs to be more complex if based on string like "3-6 Months"
-    // For now, we'll skip direct DB duration filtering unless it's stored in a queryable format
-    // Or, implement getDurationCategory logic here or fetch all and filter in memory for simplicity.
-
     if (filters.startDate) {
-      query.startDate = { $gte: new Date(filters.startDate).toISOString() };
+      filteredPrograms = filteredPrograms.filter(p => new Date(p.startDate) >= new Date(filters.startDate!));
     }
     if (filters.searchTerm) {
-      query.$or = [
-        { title: { $regex: filters.searchTerm, $options: 'i' } },
-        { description: { $regex: filters.searchTerm, $options: 'i' } },
-        { category: { $regex: filters.searchTerm, $options: 'i' } },
-      ];
+      const term = filters.searchTerm.toLowerCase();
+      filteredPrograms = filteredPrograms.filter(p => 
+        p.title.toLowerCase().includes(term) ||
+        p.description.toLowerCase().includes(term) ||
+        p.category.toLowerCase().includes(term)
+      );
     }
+    // Duration filter would need getDurationCategory logic here or be simpler
   }
-
-  const programs = await programsCollection.find(query).toArray();
-  return programs.map(program => ({ ...program, id: program._id!.toString() }));
+  return JSON.parse(JSON.stringify(filteredPrograms)); // Simulate DB fetch (deep copy)
 }
 
 export async function getProgramById(id: string): Promise<Program | null> {
-  await seedProgramsIfEmpty(); // Ensure data exists for demo
-  if (!ObjectId.isValid(id)) {
-      console.error("Invalid Program ID format:", id);
-      return null;
+  const program = programsCache.find(p => p.id === id);
+  return program ? JSON.parse(JSON.stringify(program)) : null;
+}
+
+// Seed function is not needed if not using a DB
+export async function seedProgramsIfEmpty(): Promise<void> {
+  // console.log("Using DUMMY_PROGRAMS directly, no seeding needed for mock implementation.");
+  // If programsCache could be empty and needs initialization from DUMMY_PROGRAMS:
+  if (programsCache.length === 0) {
+      programsCache = seedPrograms.map((p, index) => ({
+        ...p,
+        id: `prog-${index + 1}`,
+        startDate: new Date(p.startDate).toISOString()
+    }));
   }
-  const programsCollection = await getProgramsCollection();
-  const program = await programsCollection.findOne({ _id: new ObjectId(id) });
-  if (program) {
-    return { ...program, id: program._id!.toString() };
-  }
-  return null;
 }

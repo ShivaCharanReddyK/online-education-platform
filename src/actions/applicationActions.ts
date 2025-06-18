@@ -1,27 +1,28 @@
 
 'use server';
 
-import { getApplicationsCollection, getProgramsCollection, getUsersCollection } from '@/lib/mongodb';
 import type { Application, Program, User } from '@/types';
 import { sendApplicationSubmittedEmail, sendApplicationStatusUpdateEmail } from './emailActions';
-import { ObjectId } from 'mongodb';
+import { getProgramById } from './programActions';
+import { getUserById } from './userActions';
+
+// Mock applications DB (in-memory for server actions)
+let MOCK_APPLICATIONS_DB: Application[] = [];
 
 export async function createApplicationAction(
   programId: string,
   userId: string,
-  formData: Omit<Application, 'id' | '_id' | 'userId' | 'programId' | 'status' | 'referenceNumber' | 'submissionDate' | 'programTitle' | 'applicantEmail' >
+  formData: Omit<Application, 'id' | 'userId' | 'programId' | 'status' | 'referenceNumber' | 'submissionDate' | 'programTitle' | 'applicantEmail' >
 ): Promise<Application | null> {
-  const applicationsCollection = await getApplicationsCollection();
-  const programsCollection = await getProgramsCollection();
-  const usersCollection = await getUsersCollection();
-
-  const program = await programsCollection.findOne({ _id: new ObjectId(programId) });
+  
+  const program = await getProgramById(programId);
   if (!program) throw new Error('Program not found');
 
-  const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+  const user = await getUserById(userId);
   if (!user) throw new Error('User not found');
 
-  const newApplicationData: Omit<Application, 'id' | '_id'> = {
+  const newApplication: Application = {
+    id: `app-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     userId: userId,
     programId: programId,
     programTitle: program.title,
@@ -32,37 +33,22 @@ export async function createApplicationAction(
     submissionDate: new Date().toISOString(),
   };
 
-  const result = await applicationsCollection.insertOne(newApplicationData as Application);
+  MOCK_APPLICATIONS_DB.push(newApplication);
   
-  if (result.insertedId) {
-    const createdApplication = { ...newApplicationData, _id: result.insertedId, id: result.insertedId.toString() };
+  // Send email notification (simulated)
+  sendApplicationSubmittedEmail(user, program, newApplication).catch(console.error);
     
-    // Send email notification (fire and forget for now)
-    sendApplicationSubmittedEmail(user, program, createdApplication).catch(console.error);
-    
-    return createdApplication;
-  }
-  return null;
+  return JSON.parse(JSON.stringify(newApplication)); // Deep copy
 }
 
 export async function getApplicationById(applicationId: string): Promise<Application | null> {
-  if (!ObjectId.isValid(applicationId)) return null;
-  const applicationsCollection = await getApplicationsCollection();
-  const application = await applicationsCollection.findOne({ _id: new ObjectId(applicationId) });
-  if (application) {
-    return { ...application, id: application._id!.toString() };
-  }
-  return null;
+  const application = MOCK_APPLICATIONS_DB.find(app => app.id === applicationId);
+  return application ? JSON.parse(JSON.stringify(application)) : null;
 }
 
 export async function getProgramForApplication(programId: string): Promise<Program | null> {
-    if (!ObjectId.isValid(programId)) return null;
-    const programsCollection = await getProgramsCollection();
-    const program = await programsCollection.findOne({ _id: new ObjectId(programId) });
-    if (program) {
-        return { ...program, id: program._id!.toString() };
-    }
-    return null;
+    // This function was originally for fetching from DB, now it can use programActions
+    return getProgramById(programId);
 }
 
 
@@ -72,58 +58,45 @@ export async function updateApplicationStatusAction(
   denialReason?: string,
   aiRecommendedPrograms?: string[]
 ): Promise<Application | null> {
-  if (!ObjectId.isValid(applicationId)) throw new Error('Invalid Application ID');
-  const applicationsCollection = await getApplicationsCollection();
-  
-  const updateDoc: Partial<Application> = { status };
+  const appIndex = MOCK_APPLICATIONS_DB.findIndex(app => app.id === applicationId);
+  if (appIndex === -1) throw new Error('Application not found');
+
+  const application = MOCK_APPLICATIONS_DB[appIndex];
+  application.status = status;
   if (status === 'denied') {
-    updateDoc.denialReason = denialReason;
+    application.denialReason = denialReason;
     if (aiRecommendedPrograms) {
-        updateDoc.aiRecommendedPrograms = aiRecommendedPrograms;
+        application.aiRecommendedPrograms = aiRecommendedPrograms;
     }
   }
+  
+  MOCK_APPLICATIONS_DB[appIndex] = application;
 
-  const result = await applicationsCollection.findOneAndUpdate(
-    { _id: new ObjectId(applicationId) },
-    { $set: updateDoc },
-    { returnDocument: 'after' }
-  );
-
-  const updatedApplication = result;
-
-  if (updatedApplication) {
-    // Send email notification
-    // Need applicant email and program title - these should be on the application document ideally
-    if (updatedApplication.applicantEmail && updatedApplication.programTitle) {
-         sendApplicationStatusUpdateEmail(
-            updatedApplication.applicantEmail,
-            `${updatedApplication.personalDetails.firstName} ${updatedApplication.personalDetails.lastName}`,
-            updatedApplication.programTitle,
-            status,
-            denialReason,
-            aiRecommendedPrograms
-        ).catch(console.error);
-    } else {
-        console.warn("Could not send status update email: missing applicantEmail or programTitle on application ID:", applicationId);
-    }
-    return { ...updatedApplication, id: updatedApplication._id!.toString() };
+  if (application.applicantEmail && application.programTitle) {
+     sendApplicationStatusUpdateEmail(
+        application.applicantEmail,
+        `${application.personalDetails.firstName} ${application.personalDetails.lastName}`,
+        application.programTitle,
+        status,
+        denialReason,
+        aiRecommendedPrograms
+    ).catch(console.error);
+  } else {
+    console.warn("Could not send status update email: missing applicantEmail or programTitle on application ID:", applicationId);
   }
-  return null;
+  return JSON.parse(JSON.stringify(application));
 }
 
 export async function getApplicationsByUserId(userId: string): Promise<Application[]> {
-  if (!ObjectId.isValid(userId)) return [];
-  const applicationsCollection = await getApplicationsCollection();
-  const applications = await applicationsCollection.find({ userId: userId }).sort({ submissionDate: -1 }).toArray();
-  return applications.map(app => ({ ...app, id: app._id!.toString() }));
+  const applications = MOCK_APPLICATIONS_DB.filter(app => app.userId === userId).sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
+  return JSON.parse(JSON.stringify(applications));
 }
 
 export async function getAllApplicationsForCounselor(filters?: { status?: string }): Promise<Application[]> {
-  const applicationsCollection = await getApplicationsCollection();
-  const query: any = {};
+  let applications = [...MOCK_APPLICATIONS_DB];
   if (filters?.status && filters.status !== 'all') {
-    query.status = filters.status;
+    applications = applications.filter(app => app.status === filters.status);
   }
-  const applications = await applicationsCollection.find(query).sort({ submissionDate: -1 }).toArray();
-  return applications.map(app => ({ ...app, id: app._id!.toString() }));
+  applications.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
+  return JSON.parse(JSON.stringify(applications));
 }

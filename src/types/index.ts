@@ -1,19 +1,16 @@
 
-import type { ObjectId } from 'mongodb';
 
 export interface User {
-  _id?: ObjectId; // MongoDB ID
-  id?: string; // string representation of _id, or used if _id is not yet assigned
+  id?: string; 
   email: string;
   role: 'student' | 'counselor';
   firstName?: string;
   lastName?: string;
-  password?: string; // Only for backend, should not be sent to client
+  password?: string; // Only for in-memory/localStorage mock, not for real DBs
 }
 
 export interface Program {
-  _id?: ObjectId;
-  id?: string; // For frontend use if needed, can be string version of _id
+  id: string; 
   title: string;
   description: string;
   category: string;
@@ -29,16 +26,15 @@ export interface Program {
 }
 
 export interface Application {
-  _id?: ObjectId;
-  id?: string; // For frontend use
-  userId: string; // student's _id as string
-  programId: string; // program's _id as string
-  programTitle?: string; // Denormalized for easier display
-  applicantEmail?: string; // Denormalized for easier display/notifications
+  id: string; 
+  userId: string; 
+  programId: string; 
+  programTitle?: string; 
+  applicantEmail?: string; 
   personalDetails: {
     firstName: string;
     lastName: string;
-    dateOfBirth: string; // Should be stored as ISODate in DB ideally
+    dateOfBirth: string; 
     phone: string;
     address: string;
   };
@@ -52,19 +48,18 @@ export interface Application {
   denialReason?: string;
   referenceNumber: string;
   submissionDate: string; // ISO date string
-  aiRecommendedPrograms?: string[]; // Store AI recommendations if denied
+  aiRecommendedPrograms?: string[];
 }
 
 export interface Payment {
-  _id?: ObjectId;
-  id?: string;
-  applicationId: string; // application _id as string
-  userId: string; // student's _id as string
+  id: string;
+  applicationId: string; 
+  userId: string; 
   amount: number;
   paymentDate: string; // ISO date string
   status: 'pending' | 'completed' | 'failed';
-  paymentMethod: 'full' | 'plan'; // Added based on student dashboard
-  transactionId?: string; // For payment gateway reference
+  paymentMethod: 'full' | 'plan';
+  transactionId?: string; 
 }
 
 // For AI Program Recommender
@@ -74,7 +69,7 @@ export interface AIRecommendationInput {
   statementOfPurpose: string;
 }
 
-export interface AIRecommendationOutput { // Renamed from AIRecommendation to avoid conflict
+export interface AIRecommendationOutput {
   programRecommendations: string[];
   reasoning: string;
 }

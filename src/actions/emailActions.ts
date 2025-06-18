@@ -1,10 +1,8 @@
 
 'use server';
 
-import { Resend } from 'resend';
 import type { User, Program, Application } from '@/types';
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
 
 interface EmailOptions {
@@ -14,38 +12,16 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
-  if (!resendApiKey) {
-    console.error('Resend API key is not configured. Email will not be sent.');
-    // For prototype, we can simulate success if no API key
-    // In a real app, this should return an error or be handled appropriately.
-    return { success: true }; // Simulate success for prototype
-  }
-
-  const resend = new Resend(resendApiKey);
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: 'LearnFlow <noreply@yourdomain.com>', // Replace with your verified Resend domain
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
-
-    if (error) {
-      console.error('Error sending email:', error);
-      return { success: false, error: error.message };
-    }
-
-    console.log('Email sent successfully:', data);
-    return { success: true };
-  } catch (e) {
-    const error = e as Error;
-    console.error('Exception sending email:', error);
-    return { success: false, error: error.message };
-  }
+  console.log("---- SIMULATING EMAIL SEND ----");
+  console.log("To:", options.to);
+  console.log("Subject:", options.subject);
+  console.log("HTML Body (first 100 chars):", options.html.substring(0, 100) + "...");
+  console.log("---- END SIMULATED EMAIL ----");
+  // Simulate success for prototype
+  return { success: true };
 }
 
-// Specific email templates
+// Specific email templates (remain largely the same, but use the simulated sendEmail)
 
 export async function sendApplicationSubmittedEmail(applicant: User, program: Program, application: Application) {
   const subject = `Your Application for ${program.title} has been Received!`;
