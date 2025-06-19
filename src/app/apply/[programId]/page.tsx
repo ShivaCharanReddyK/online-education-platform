@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react'; // Import 'use'
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/shared/MainLayout';
 import type { Program, Application } from '@/types';
@@ -36,7 +36,13 @@ const applicationSchema = z.object({
 
 type ApplicationFormData = z.infer<typeof applicationSchema>;
 
-export default function ApplyPage({ params }: { params: { programId: string } }) {
+interface ApplyPageResolvedParams {
+  programId: string;
+}
+
+export default function ApplyPage({ params: paramsPromise }: { params: Promise<ApplyPageResolvedParams> }) {
+  const { programId } = use(paramsPromise); // Unwrap the params Promise
+
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -64,18 +70,18 @@ export default function ApplyPage({ params }: { params: { programId: string } })
    useEffect(() => {
     if (!authLoading && !user) {
       toast({ title: "Authentication Required", description: "Please log in to apply for a program.", variant: "destructive" });
-      router.push(`/login?redirect=/apply/${params.programId}`);
+      router.push(`/login?redirect=/apply/${programId}`); // Use unwrapped programId
     } else if (user && user.email && form.getValues('email') !== user.email) {
        // Set user's email in the form once user data is available
       form.reset({ ...form.getValues(), email: user.email });
     }
-  }, [user, authLoading, router, params.programId, toast, form]);
+  }, [user, authLoading, router, programId, toast, form]); // Use unwrapped programId
 
   useEffect(() => {
     async function fetchProgram() {
       setIsLoadingProgram(true);
       try {
-        const foundProgram = await getProgramById(params.programId);
+        const foundProgram = await getProgramById(programId); // Use unwrapped programId
         if (foundProgram) {
           setProgram(foundProgram);
         } else {
@@ -89,10 +95,10 @@ export default function ApplyPage({ params }: { params: { programId: string } })
         setIsLoadingProgram(false);
       }
     }
-    if (params.programId) {
+    if (programId) { // Use unwrapped programId
         fetchProgram();
     }
-  }, [params.programId, toast, router]);
+  }, [programId, toast, router]); // Use unwrapped programId
 
   const onSubmit = async (data: ApplicationFormData) => {
     if (!user || !user.id) {
