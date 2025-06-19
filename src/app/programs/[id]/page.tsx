@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react'; // Added 'use'
 import { MainLayout } from '@/components/shared/MainLayout';
 import type { Program } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { getProgramById } from '@/actions/programActions';
-import { DUMMY_PROGRAMS } from '@/lib/constants'; // For fallback type if needed
+// DUMMY_PROGRAMS is not directly used here for fetching, but its structure might be relevant for Program type
 
-export default function ProgramDetailPage({ params }: { params: { id: string } }) {
+interface ProgramDetailPageResolvedParams {
+  id: string;
+}
+
+export default function ProgramDetailPage({ params: paramsPromise }: { params: Promise<ProgramDetailPageResolvedParams> }) {
+  const { id: programId } = use(paramsPromise); // Unwrap the params Promise
+
   const [program, setProgram] = useState<Program | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -25,7 +31,7 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
     setIsLoading(true);
     async function fetchProgram() {
       try {
-        const fetchedProgram = await getProgramById(params.id);
+        const fetchedProgram = await getProgramById(programId); // Use unwrapped programId
         if (fetchedProgram) {
           setProgram(fetchedProgram);
         } else {
@@ -47,7 +53,7 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
       }
     }
 
-    if (params.id) {
+    if (programId) { // Use unwrapped programId
       fetchProgram();
     } else {
         setIsLoading(false); // No ID, no fetch
@@ -57,7 +63,7 @@ export default function ProgramDetailPage({ params }: { params: { id: string } }
             variant: "destructive",
         });
     }
-  }, [params.id, toast]);
+  }, [programId, toast]); // Use unwrapped programId in dependency array
 
   if (isLoading) {
     return (
