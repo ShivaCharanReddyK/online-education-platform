@@ -70,9 +70,11 @@ export default function StudentDashboardPage() {
   }, [user, authLoading, router, toast]);
 
   const fetchDashboardData = useCallback(async () => {
-    if (user && user.id) {
-      setIsLoadingData(true);
-      try {
+    if (!user || !user.id) { // Early return if user is not available
+        return;
+    }
+    setIsLoadingData(true);
+    try {
         const userApplications = await getApplicationsByUserId(user.id);
         setApplications(userApplications);
 
@@ -120,12 +122,11 @@ export default function StudentDashboardPage() {
         });
         setPayments(currentAppPayments);
 
-      } catch (error) {
+    } catch (error) {
         console.error("Failed to load dashboard data:", error);
         toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive"});
-      } finally {
+    } finally {
         setIsLoadingData(false);
-      }
     }
   }, [user, toast]); // Removed programsCache from dependencies to break loop
 
