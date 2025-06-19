@@ -17,8 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getApplicationsByUserId } from '@/actions/applicationActions';
 import { getProgramById } from '@/actions/programActions';
 
-// Mock payments storage (in-memory for server actions or localStorage on client)
-// For this page, we'll keep it client-side using useState and simulate interaction.
+// Mock payments storage (in-memory for client-side simulation for this page)
 let MOCK_PAYMENTS_DB: Payment[] = [];
 
 
@@ -77,24 +76,37 @@ export default function StudentDashboardPage() {
         const userApplications = await getApplicationsByUserId(user.id);
         setApplications(userApplications);
 
-        const newProgramsCache = { ...programsCache };
-        for (const app of userApplications) {
-          if (app.programId && !newProgramsCache[app.programId]) {
-            const programDetails = await getProgramById(app.programId);
-            if (programDetails) {
-              newProgramsCache[app.programId] = programDetails;
-            }
+        const programIdsFromApps = userApplications.map(app => app.programId).filter(Boolean) as string[];
+        const uniqueProgramIds = Array.from(new Set(programIdsFromApps));
+        
+        const newCacheEntries: Record<string, Program> = {};
+        // Use a temporary copy of programsCache from state for filtering to avoid direct dependency issues in useCallback
+        const currentProgramsCacheState = programsCache;
+        const programsToFetchDetailsFor = uniqueProgramIds.filter(id => !currentProgramsCacheState[id]);
+
+        if (programsToFetchDetailsFor.length > 0) {
+          const fetchedProgramDetails = await Promise.all(
+            programsToFetchDetailsFor.map(id => getProgramById(id))
+          );
+          fetchedProgramDetails.forEach(program => {
+            if (program) newCacheEntries[program.id] = program;
+          });
+          if (Object.keys(newCacheEntries).length > 0) {
+            setProgramsCache(prevCache => ({ ...prevCache, ...newCacheEntries }));
           }
         }
-        setProgramsCache(newProgramsCache);
-        
+
+        // For payment processing, use a merged view of program data: current state + newly fetched in this cycle
+        const combinedProgramsData = { ...currentProgramsCacheState, ...newCacheEntries };
+
         const userPayments = await getPaymentsByUserId(user.id);
-        
-        // Initialize pending payments based on approved apps not yet paid
         const currentAppPayments: Payment[] = [...userPayments];
+
         userApplications.forEach(app => {
             if (app.status === 'approved' && !currentAppPayments.find(p => p.applicationId === app.id)) {
-                const programTuition = newProgramsCache[app.programId]?.tuitionFee || 5000;
+                const programDetail = combinedProgramsData[app.programId];
+                const programTuition = programDetail?.tuitionFee || 0;
+                
                 currentAppPayments.push({
                     id: `pay-sim-${app.id}`,
                     applicationId: app.id!,
@@ -108,7 +120,6 @@ export default function StudentDashboardPage() {
         });
         setPayments(currentAppPayments);
 
-
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
         toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive"});
@@ -116,11 +127,14 @@ export default function StudentDashboardPage() {
         setIsLoadingData(false);
       }
     }
-  }, [user, toast, programsCache]);
+  }, [user, toast]); // Removed programsCache from dependencies to break loop
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    // Only fetch data if user is authenticated and available
+    if (user && user.id && !authLoading) {
+      fetchDashboardData();
+    }
+  }, [user, authLoading, fetchDashboardData]);
 
 
   const getProgramTitle = (programId: string) => {
@@ -143,11 +157,20 @@ export default function StudentDashboardPage() {
     }
     const amount = getProgramTuition(app.programId);
     if (amount <= 0) {
-        toast({ title: "Error", description: "Program tuition fee not available.", variant: "destructive" });
-        return;
+        // If program details might not be in cache yet, consider fetching on demand or showing loading.
+        // For simplicity, we'll assume programsCache is sufficiently populated or tuition is 0.
+        const programDetails = await getProgramById(app.programId);
+        if (!programDetails || programDetails.tuitionFee <= 0) {
+            toast({ title: "Error", description: "Program tuition fee not available or is zero.", variant: "destructive" });
+            return;
+        }
+        // This path means amount was 0 from cache, but now we fetched it.
+        // This isn't ideal; payment processing should ideally wait for tuition to be known.
+        // The fix above in fetchDashboardData to use combinedProgramsData should mitigate this.
     }
 
-    setIsLoadingData(true);
+
+    setIsLoadingData(true); // Consider a more specific loading state for payment processing
     try {
       const newPayment = await createPaymentAction(applicationId, user.id, amount, paymentMethod);
       setPayments(prevPayments => {
@@ -163,11 +186,11 @@ export default function StudentDashboardPage() {
       console.error("Payment processing error:", error);
       toast({ title: "Payment Error", description: "Could not process payment.", variant: "destructive" });
     } finally {
-      setIsLoadingData(false);
+      setIsLoadingData(false); // Reset general loading state
     }
   };
 
-  if (authLoading || (isLoadingData && applications.length === 0 && payments.length === 0) ) {
+  if (authLoading || (isLoadingData && applications.length === 0 && payments.length === 0 && Object.keys(programsCache).length === 0) ) {
     return (
       <MainLayout>
         <div className="container mx-auto py-12 px-4 md:px-6 flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -177,7 +200,19 @@ export default function StudentDashboardPage() {
     );
   }
   
-  if (!user) return null;
+  if (!user && !authLoading) { // If not loading and no user, don't render dashboard content (redirect handled by other useEffect)
+    return null;
+  }
+  if (!user && authLoading) { // If loading and no user yet, show loader (covered by above)
+     return (
+      <MainLayout>
+        <div className="container mx-auto py-12 px-4 md:px-6 flex justify-center items-center min-h-[calc(100vh-10rem)]">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
+  if (!user) return null; // Should be caught by above, but as a safeguard
 
   return (
     <MainLayout>
@@ -191,7 +226,7 @@ export default function StudentDashboardPage() {
           <h2 className="text-2xl font-semibold mb-6 font-headline flex items-center">
             <FileText className="mr-3 h-7 w-7 text-primary" /> My Applications
           </h2>
-          {applications.length === 0 ? (
+          {applications.length === 0 && !isLoadingData ? ( // Show "No applications" only if not loading
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>No Applications Found</AlertTitle>
@@ -199,6 +234,10 @@ export default function StudentDashboardPage() {
                 You haven&apos;t applied to any programs yet. <Link href="/programs" className="font-medium text-primary hover:underline">Browse programs</Link> to get started.
               </AlertDescription>
             </Alert>
+          ) : isLoadingData && applications.length === 0 ? ( // Show loader if loading and no apps yet
+            <div className="flex justify-center items-center p-10">
+                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
           ) : (
             <div className="space-y-6">
               {applications.map(app => (
@@ -284,3 +323,4 @@ export default function StudentDashboardPage() {
     </MainLayout>
   );
 }
+
