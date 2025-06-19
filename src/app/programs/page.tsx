@@ -31,57 +31,43 @@ export default function ProgramsPage() {
   });
   
   const [displayedItems, setDisplayedItems] = useState(ITEMS_PER_PAGE);
-  const [isFiltering, setIsFiltering] = useState(false); // For load more button state
+  const [isLoadingMore, setIsLoadingMore] = useState(false); 
 
-  const fetchPrograms = useCallback(async () => {
+  const fetchPrograms = useCallback(async (currentFilters: typeof filters) => {
     setIsLoadingPrograms(true);
     try {
-      // Pass current filters to backend if backend supports it
-      // For now, getAllPrograms might do basic filtering or we filter client-side more heavily
-      const programs = await getAllPrograms(filters);
+      const programs = await getAllPrograms(currentFilters);
       setAllPrograms(programs);
     } catch (error) {
       console.error("Failed to fetch programs:", error);
-      setAllPrograms(FallbackPrograms); // Fallback to dummy data on error
+      setAllPrograms(FallbackPrograms); 
     }
     setIsLoadingPrograms(false);
-  }, [filters]); // Add filters as dependency
+  }, []); 
 
   useEffect(() => {
-    fetchPrograms();
-  }, [fetchPrograms]);
+    fetchPrograms(filters);
+  }, [filters, fetchPrograms]);
 
 
   useEffect(() => {
-    // Update URL when filters change
     const params = new URLSearchParams();
     if (filters.category !== 'All') params.set('category', filters.category);
     if (filters.duration !== 'All') params.set('duration', filters.duration);
     if (filters.startDate) params.set('startDate', filters.startDate);
     if (filters.searchTerm) params.set('searchTerm', filters.searchTerm);
     router.replace(`/programs?${params.toString()}`, { scroll: false });
-
-    // Re-fetch or re-filter when filters change
-    // If backend handles filtering, re-fetch:
-    // fetchPrograms(); 
-    // If client-side filtering is primary, no need to re-fetch all, filteredPrograms memo will update.
-    // Since getAllPrograms now accepts filters, we should re-fetch.
-    // The useEffect with fetchPrograms as dependency (which has filters in its dep array) handles this.
-
   }, [filters, router]);
 
 
   const handleFilterChange = (newFilters: typeof filters) => {
     setFilters(newFilters);
-    setDisplayedItems(ITEMS_PER_PAGE); // Reset pagination
-    // fetchPrograms will be called by the useEffect above
+    setDisplayedItems(ITEMS_PER_PAGE); 
   };
 
   const filteredPrograms = useMemo(() => {
-    // Client-side filtering as a fallback or primary method if backend filtering is limited
     return allPrograms.filter(program => {
       const categoryMatch = filters.category === 'All' || program.category === filters.category;
-      // Ensure getDurationCategory is robust for potentially undefined program.duration
       const durationMatch = filters.duration === 'All' || (program.duration && getDurationCategory(program.duration) === filters.duration);
       const startDateMatch = !filters.startDate || new Date(program.startDate) >= new Date(filters.startDate);
       const searchTermMatch = !filters.searchTerm || 
@@ -95,11 +81,10 @@ export default function ProgramsPage() {
   const currentPrograms = filteredPrograms.slice(0, displayedItems);
 
   const loadMore = () => {
-    setIsFiltering(true); // Use isFiltering for load more button state
-    setTimeout(() => { // Simulate network delay if any, though items are already fetched
-      setDisplayedItems(prev => prev + ITEMS_PER_PAGE);
-      setIsFiltering(false);
-    }, 300);
+    setIsLoadingMore(true); 
+    // No artificial delay, simply update the displayed items
+    setDisplayedItems(prev => prev + ITEMS_PER_PAGE);
+    setIsLoadingMore(false); 
   };
   
   if (isLoadingPrograms && allPrograms.length === 0) {
@@ -143,8 +128,8 @@ export default function ProgramsPage() {
 
             {filteredPrograms.length > displayedItems && (
               <div className="mt-8 text-center">
-                <Button onClick={loadMore} disabled={isFiltering} size="lg">
-                  {isFiltering ? (
+                <Button onClick={loadMore} disabled={isLoadingMore} size="lg">
+                  {isLoadingMore ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Loading...
