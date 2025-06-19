@@ -70,7 +70,7 @@ export default function StudentDashboardPage() {
   }, [user, authLoading, router, toast]);
 
   const fetchDashboardData = useCallback(async () => {
-    if (!user || !user.id) { // Early return if user is not available
+    if (!user || !user.id) { 
         return;
     }
     setIsLoadingData(true);
@@ -82,7 +82,6 @@ export default function StudentDashboardPage() {
         const uniqueProgramIds = Array.from(new Set(programIdsFromApps));
         
         const newCacheEntries: Record<string, Program> = {};
-        // Use a temporary copy of programsCache from state for filtering to avoid direct dependency issues in useCallback
         const currentProgramsCacheState = programsCache;
         const programsToFetchDetailsFor = uniqueProgramIds.filter(id => !currentProgramsCacheState[id]);
 
@@ -98,7 +97,6 @@ export default function StudentDashboardPage() {
           }
         }
 
-        // For payment processing, use a merged view of program data: current state + newly fetched in this cycle
         const combinedProgramsData = { ...currentProgramsCacheState, ...newCacheEntries };
 
         const userPayments = await getPaymentsByUserId(user.id);
@@ -117,6 +115,7 @@ export default function StudentDashboardPage() {
                     paymentDate: new Date().toISOString(), 
                     status: 'pending', 
                     paymentMethod: 'full', 
+                    transactionId: `sim_txn_${app.id}`
                 });
             }
         });
@@ -128,10 +127,9 @@ export default function StudentDashboardPage() {
     } finally {
         setIsLoadingData(false);
     }
-  }, [user, toast]); // Removed programsCache from dependencies to break loop
+  }, [user, toast]); 
 
   useEffect(() => {
-    // Only fetch data if user is authenticated and available
     if (user && user.id && !authLoading) {
       fetchDashboardData();
     }
@@ -156,22 +154,22 @@ export default function StudentDashboardPage() {
         toast({ title: "Error", description: "Application or program details not found.", variant: "destructive" });
         return;
     }
-    const amount = getProgramTuition(app.programId);
+    
+    let amount = getProgramTuition(app.programId);
     if (amount <= 0) {
-        // If program details might not be in cache yet, consider fetching on demand or showing loading.
-        // For simplicity, we'll assume programsCache is sufficiently populated or tuition is 0.
-        const programDetails = await getProgramById(app.programId);
-        if (!programDetails || programDetails.tuitionFee <= 0) {
+        const programDetails = await getProgramById(app.programId); // Fetch on demand if not in cache or 0
+        if (programDetails && programDetails.tuitionFee > 0) {
+            amount = programDetails.tuitionFee;
+             // Optionally update cache if this case is hit often, though fetchDashboardData should handle it
+            setProgramsCache(prev => ({...prev, [app.programId]: programDetails}));
+        } else {
             toast({ title: "Error", description: "Program tuition fee not available or is zero.", variant: "destructive" });
             return;
         }
-        // This path means amount was 0 from cache, but now we fetched it.
-        // This isn't ideal; payment processing should ideally wait for tuition to be known.
-        // The fix above in fetchDashboardData to use combinedProgramsData should mitigate this.
     }
 
 
-    setIsLoadingData(true); // Consider a more specific loading state for payment processing
+    setIsLoadingData(true); 
     try {
       const newPayment = await createPaymentAction(applicationId, user.id, amount, paymentMethod);
       setPayments(prevPayments => {
@@ -187,7 +185,7 @@ export default function StudentDashboardPage() {
       console.error("Payment processing error:", error);
       toast({ title: "Payment Error", description: "Could not process payment.", variant: "destructive" });
     } finally {
-      setIsLoadingData(false); // Reset general loading state
+      setIsLoadingData(false); 
     }
   };
 
@@ -201,10 +199,10 @@ export default function StudentDashboardPage() {
     );
   }
   
-  if (!user && !authLoading) { // If not loading and no user, don't render dashboard content (redirect handled by other useEffect)
+  if (!user && !authLoading) { 
     return null;
   }
-  if (!user && authLoading) { // If loading and no user yet, show loader (covered by above)
+  if (!user && authLoading) { 
      return (
       <MainLayout>
         <div className="container mx-auto py-12 px-4 md:px-6 flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -213,7 +211,7 @@ export default function StudentDashboardPage() {
       </MainLayout>
     );
   }
-  if (!user) return null; // Should be caught by above, but as a safeguard
+  if (!user) return null; 
 
   return (
     <MainLayout>
@@ -227,15 +225,19 @@ export default function StudentDashboardPage() {
           <h2 className="text-2xl font-semibold mb-6 font-headline flex items-center">
             <FileText className="mr-3 h-7 w-7 text-primary" /> My Applications
           </h2>
-          {applications.length === 0 && !isLoadingData ? ( // Show "No applications" only if not loading
+          {applications.length === 0 && !isLoadingData ? ( 
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>No Applications Found</AlertTitle>
               <AlertDescription>
-                You haven&apos;t applied to any programs yet. <Link href="/programs" className="font-medium text-primary hover:underline">Browse programs</Link> to get started.
+                You haven&apos;t applied to any programs yet.{" "}
+                <Button variant="link" asChild className="p-0 h-auto font-medium text-primary hover:underline">
+                  <Link href="/programs">Browse programs</Link>
+                </Button>
+                {" "}to get started.
               </AlertDescription>
             </Alert>
-          ) : isLoadingData && applications.length === 0 ? ( // Show loader if loading and no apps yet
+          ) : isLoadingData && applications.length === 0 ? ( 
             <div className="flex justify-center items-center p-10">
                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
