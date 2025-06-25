@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, use } from 'react';
 import { MainLayout } from '@/components/shared/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -21,7 +21,8 @@ import { getApplicationById, updateApplicationStatusAction, getProgramForApplica
 import { getUserById } from '@/actions/userActions';
 
 
-export default function ApplicationReviewPage({ params }: { params: { applicationId: string } }) {
+export default function ApplicationReviewPage({ params: paramsPromise }: { params: Promise<{ applicationId: string }> }) {
+  const { applicationId } = use(paramsPromise);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -37,18 +38,18 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push(`/login?redirect=/counselor/applications/${params.applicationId}`);
+      router.push(`/login?redirect=/counselor/applications/${applicationId}`);
     } else if (user && user.role !== 'counselor') {
       toast({ title: "Access Denied", description: "This page is for counselors only.", variant: "destructive"});
       router.push('/');
     }
-  }, [user, authLoading, router, params.applicationId, toast]);
+  }, [user, authLoading, router, applicationId, toast]);
 
   const fetchApplicationData = useCallback(async () => {
-    if (user && user.role === 'counselor' && params.applicationId) {
+    if (user && user.role === 'counselor' && applicationId) {
       setIsLoadingData(true);
       try {
-        const foundApp = await getApplicationById(params.applicationId);
+        const foundApp = await getApplicationById(applicationId);
         if (foundApp) {
           setApplication(foundApp);
           if (foundApp.programId) {
@@ -71,7 +72,7 @@ export default function ApplicationReviewPage({ params }: { params: { applicatio
         setIsLoadingData(false);
       }
     }
-  }, [user, params.applicationId, router, toast]);
+  }, [user, applicationId, router, toast]);
 
   useEffect(() => {
     fetchApplicationData();
