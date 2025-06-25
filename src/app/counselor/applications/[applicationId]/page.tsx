@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, use } from 'react';
 import { MainLayout } from '@/components/shared/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import type { Application, Program, AIRecommendationOutput } from '@/types'; // AIRecommendationOutput name changed
+import type { Application, Program, AIRecommendationOutput } from '@/types';
 import { AIProgramRecommender } from '@/components/application/AIProgramRecommender';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
