@@ -370,7 +370,7 @@ export const DUMMY_PROGRAMS: Omit<Program, '_id' | 'id'>[] = [
     category: 'Engineering',
     duration: '12 Months',
     startDate: new Date(Date.now() + 100 * 24 * 60 * 60 * 1000).toISOString(),
-    imageUrl: 'https://images.unsplash.com/photo-1508244158102-d15469550732?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGVuZXJneXxlbnwwfHx8fDE3MTI4NjU3Njl8MA&ixlib=rb-4.0.3&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1668097613572-40b7c11c8727?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxTdXN0YWluYWJsZSUyMEVuZXJneXxlbnwwfHx8fDE3NTA5MzE3ODB8MA&ixlib=rb-4.1.0&q=80&w=1080',
     aiHint: 'wind turbine',
     features: ['Solar, Wind, Geothermal energy', 'Energy policy and economics', 'System modeling'],
     tuitionFee: 9000,
