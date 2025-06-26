@@ -35,7 +35,7 @@ export default function HomePage() {
               </div>
             </div>
             <Image
-              src="https://placehold.co/600x400.png"
+              src="https://images.unsplash.com/photo-1506784926709-22f1ec395907?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxDYXJlZXJ8ZW58MHx8fHwxNzUwOTMwNjQzfDA&ixlib=rb-4.1.0&q=80&w=1080"
               alt="Hero Learner"
               data-ai-hint="education learning"
               width={600}
