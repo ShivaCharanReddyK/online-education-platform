@@ -10,7 +10,7 @@ export const DUMMY_PROGRAMS: Omit<Program, '_id' | 'id'>[] = [
     category: 'Technology',
     duration: '6 Months',
     startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXZlbG9wbWVudHxlbnwwfHx8fDE3MTI4NjU0MzB8MA&ixlib=rb-4.0.3&q=80&w=1080',
     aiHint: 'laptop code',
     features: ['JavaScript, React, Node.js', 'Real-world projects', 'Career support'],
     tuitionFee: 5000,
