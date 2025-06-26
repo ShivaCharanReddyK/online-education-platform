@@ -88,7 +88,7 @@ export const DUMMY_PROGRAMS: Omit<Program, '_id' | 'id'>[] = [
     category: 'Technology',
     duration: '7 Months',
     startDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(),
-    imageUrl: 'https://images.unsplash.com/photo-1550751827-4138d04d475d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjeWJlcnNlY3VyaXR5fGVufDB8fHx8MTcxMjg2NTUyM3ww&ixlib=rb-4.0.3&q=80&w=1080',
+    imageUrl: 'https://images.unsplash.com/photo-1662638600476-d563fffbb072?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxDeWJlciUyMHNlY3VyaXR5JTIwYW5hbHlzdHxlbnwwfHx8fDE3NTA5MzExNzl8MA&ixlib=rb-4.1.0&q=80&w=1080',
     aiHint: 'cyber security',
     features: ['Hands-on labs', 'Industry-recognized tools', 'Preparation for CompTIA Security+'],
     tuitionFee: 6000,
