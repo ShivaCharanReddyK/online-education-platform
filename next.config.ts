@@ -17,7 +17,29 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
+  },
+  webpack: (config, { isServer, webpack }) => {
+    // This is to avoid the 'child_process' error with mongodb
+    if (!isServer) {
+        config.externals = [
+            ...config.externals,
+            'mongodb-client-encryption',
+            'aws4',
+            'kerberos',
+            'snappy',
+            'snappy/package.json',
+            'gcp-metadata',
+            'child_process'
+        ];
+    }
+    return config;
   },
 };
 
