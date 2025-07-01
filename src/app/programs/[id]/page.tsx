@@ -9,11 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Image from 'next/image';
 import Link from 'next/link';
-import { CalendarDays, Clock, Tag, CheckCircle, BookOpen, Users, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock, Tag, CheckCircle, BookOpen, Users, GraduationCap, ArrowRight, Loader2, AlertCircle, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { getProgramById } from '@/actions/programActions';
+import { useAuth } from '@/contexts/AuthContext';
+import { checkUserApplicationStatus } from '@/actions/applicationActions';
 // DUMMY_PROGRAMS is not directly used here for fetching, but its structure might be relevant for Program type
 
 interface ProgramDetailPageResolvedParams {
@@ -25,15 +27,28 @@ export default function ProgramDetailPage({ params: paramsPromise }: { params: P
 
   const [program, setProgram] = useState<Program | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [applicationStatus, setApplicationStatus] = useState<{
+    canApply: boolean;
+    message?: string;
+    existingStatus?: string;
+    applicationId?: string;
+  }>({ canApply: true });
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
-    async function fetchProgram() {
+    async function fetchData() {
       try {
         const fetchedProgram = await getProgramById(programId); // Use unwrapped programId
         if (fetchedProgram) {
           setProgram(fetchedProgram);
+          
+          // Check if user already applied to this program
+          if (user && user.id) {
+            const applicationStatusResult = await checkUserApplicationStatus(user.id, programId);
+            setApplicationStatus(applicationStatusResult);
+          }
         } else {
           toast({
             title: "Error",
@@ -54,7 +69,7 @@ export default function ProgramDetailPage({ params: paramsPromise }: { params: P
     }
 
     if (programId) { // Use unwrapped programId
-      fetchProgram();
+      fetchData();
     } else {
         setIsLoading(false); // No ID, no fetch
          toast({
@@ -63,7 +78,7 @@ export default function ProgramDetailPage({ params: paramsPromise }: { params: P
             variant: "destructive",
         });
     }
-  }, [programId, toast]); // Use unwrapped programId in dependency array
+  }, [programId, toast, user]); // Use unwrapped programId in dependency array
 
   if (isLoading) {
     return (
@@ -210,11 +225,59 @@ export default function ProgramDetailPage({ params: paramsPromise }: { params: P
                     <p className="text-2xl font-bold text-primary">${program.tuitionFee.toLocaleString()}</p>
                   </div>
                 </div>
-                <Button size="lg" className="w-full mt-4 bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
-                  <Link href={`/apply/${program.id}`}>
-                    Apply Now <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
+                {/* Application status alert */}
+                {!applicationStatus.canApply && (
+                  <div className={`rounded-lg p-4 mb-4 ${applicationStatus.existingStatus === 'approved' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className="flex items-center">
+                      {applicationStatus.existingStatus === 'approved' ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-blue-500 mr-2" />
+                      )}
+                      <p className={`text-sm ${applicationStatus.existingStatus === 'approved' ? 'text-green-700' : 'text-blue-700'}`}>
+                        {applicationStatus.message}
+                      </p>
+                    </div>
+                    {applicationStatus.existingStatus === 'approved' && (
+                      <Button size="sm" className="w-full mt-2 bg-green-500 hover:bg-green-600" asChild>
+                        <Link href="/dashboard">
+                          Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {applicationStatus.existingStatus === 'pending' && (
+                      <Button size="sm" className="w-full mt-2 bg-blue-500 hover:bg-blue-600" asChild>
+                        <Link href="/dashboard">
+                          View Application <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
+                
+                {/* Apply button */}
+                {applicationStatus.canApply ? (
+                  <Button size="lg" className="w-full mt-4 bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+                    <Link href={`/apply/${program.id}`}>
+                      Apply Now <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="w-full mt-4" disabled>
+                    Already Applied
+                  </Button>
+                )}
+                
+                {/* Sign in prompt if not logged in */}
+                {!user && (
+                  <div className="mt-3 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      <Link href={`/login?redirect=/programs/${program.id}`} className="text-primary hover:underline">
+                        Sign in
+                      </Link> to apply for this program
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </aside>

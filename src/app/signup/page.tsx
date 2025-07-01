@@ -18,6 +18,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<'student' | 'counselor'>('student');
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
@@ -26,6 +28,16 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!firstName.trim() || !lastName.trim()) {
+      toast({
+        title: "Signup Failed",
+        description: "Please provide both first and last name.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (password !== confirmPassword) {
       toast({
         title: "Signup Failed",
@@ -34,14 +46,24 @@ export default function SignupPage() {
       });
       return;
     }
+    
+    if (password.length < 6) {
+      toast({
+        title: "Signup Failed",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
-    const result = await signup(email, password, role);
+    const result = await signup(email, password, role, firstName, lastName);
     
     if (result.success && result.user) {
         toast({
             title: "Signup Successful",
-            description: `Welcome, ${result.user.email}! Your account has been created.`,
+            description: `Welcome, ${result.user.firstName} ${result.user.lastName}! Your account has been created.`,
         });
         if (result.user.role === 'counselor') {
             router.push('/counselor/dashboard');
@@ -71,6 +93,32 @@ export default function SignupPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -84,7 +132,7 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password (min. 6 characters)</Label>
                 <Input
                   id="password"
                   type="password"
@@ -93,7 +141,7 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  minLength={6} // Basic password policy
+                  minLength={6}
                 />
               </div>
               <div className="space-y-2">

@@ -124,7 +124,7 @@ export default function CounselorDashboardPage() {
                   <TableBody>
                     {pendingApplications.map(app => (
                       <TableRow key={app.id}>
-                        <TableCell>{app.personalDetails.firstName} {app.personalDetails.lastName}</TableCell>
+                        <TableCell>{app.personalDetails ? `${app.personalDetails.firstName || ''} ${app.personalDetails.lastName || ''}` : 'Not provided'}</TableCell>
                         <TableCell>{app.programTitle || 'Unknown Program'}</TableCell>
                         <TableCell>{new Date(app.submissionDate).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">

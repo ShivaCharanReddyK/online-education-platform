@@ -1,102 +1,212 @@
-
 'use server';
 
+import { ObjectId } from 'mongodb';
 import type { Application, Program, User } from '@/types';
 import { sendApplicationSubmittedEmail, sendApplicationStatusUpdateEmail } from './emailActions';
 import { getProgramById } from './programActions';
 import { getUserById } from './userActions';
+import { 
+  createApplication, 
+  getApplicationsByUserId as dbGetApplicationsByUserId, 
+  getAllApplications, 
+  updateApplicationStatus,
+  deleteApplication,
+  checkExistingApplications
+} from '@/lib/database';
+import type { DbApplication } from '@/lib/models';
 
-// Mock applications DB (in-memory for server actions)
-let MOCK_APPLICATIONS_DB: Application[] = [];
+// Convert Database Application to App Application format
+function dbApplicationToAppApplication(dbApp: DbApplication): Application {
+  return {
+    id: dbApp._id!.toString(),
+    userId: dbApp.userId.toString(),
+    programId: dbApp.programId.toString(),
+    programTitle: dbApp.programTitle,
+    applicantEmail: dbApp.applicantEmail,
+    personalDetails: dbApp.personalDetails,
+    educationalBackground: dbApp.educationalBackground,
+    statementOfPurpose: dbApp.statementOfPurpose,
+    status: dbApp.status,
+    denialReason: dbApp.denialReason,
+    aiRecommendedPrograms: dbApp.aiRecommendedPrograms,
+    referenceNumber: dbApp.referenceNumber,
+    submissionDate: dbApp.submissionDate
+  };
+}
 
 export async function createApplicationAction(
   programId: string,
   userId: string,
   formData: Omit<Application, 'id' | 'userId' | 'programId' | 'status' | 'referenceNumber' | 'submissionDate' | 'programTitle' | 'applicantEmail' >
 ): Promise<Application | null> {
-  
-  const program = await getProgramById(programId);
-  if (!program) throw new Error('Program not found');
+  try {
+    const program = await getProgramById(programId);
+    if (!program) throw new Error('Program not found');
 
-  const user = await getUserById(userId);
-  if (!user) throw new Error('User not found');
+    const user = await getUserById(userId);
+    if (!user) throw new Error('User not found');
 
-  const newApplication: Application = {
-    id: `app-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    userId: userId,
-    programId: programId,
-    programTitle: program.title,
-    applicantEmail: user.email,
-    ...formData,
-    status: 'pending',
-    referenceNumber: `LF${new Date().getFullYear()}${Math.floor(10000 + Math.random() * 90000)}`,
-    submissionDate: new Date().toISOString(),
-  };
-
-  MOCK_APPLICATIONS_DB.push(newApplication);
-  
-  // Send email notification (simulated)
-  sendApplicationSubmittedEmail(user, program, newApplication).catch(console.error);
+    const referenceNumber = `LF${new Date().getFullYear()}${Math.floor(10000 + Math.random() * 90000)}`;
     
-  return JSON.parse(JSON.stringify(newApplication)); // Deep copy
+    const applicationData: Omit<DbApplication, '_id' | 'createdAt' | 'updatedAt'> = {
+      userId: new ObjectId(userId),
+      programId: new ObjectId(programId),
+      programTitle: program.title,
+      applicantEmail: user.email,
+      personalDetails: formData.personalDetails,
+      educationalBackground: formData.educationalBackground,
+      statementOfPurpose: formData.statementOfPurpose,
+      status: 'pending',
+      referenceNumber,
+      submissionDate: new Date().toISOString()
+    };
+
+    const result = await createApplication(applicationData);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create application');
+    }
+
+    // Get the created application
+    const applications = await dbGetApplicationsByUserId(userId);
+    const newApplication = applications.find(app => app.referenceNumber === referenceNumber);
+    
+    if (!newApplication) {
+      throw new Error('Application created but could not retrieve');
+    }
+
+    // Send email notification
+    const appForEmail = dbApplicationToAppApplication(newApplication);
+    sendApplicationSubmittedEmail(user, program, appForEmail).catch(console.error);
+    
+    return appForEmail;
+  } catch (error) {
+    console.error('Create application error:', error);
+    throw error;
+  }
 }
 
 export async function getApplicationById(applicationId: string): Promise<Application | null> {
-  const application = MOCK_APPLICATIONS_DB.find(app => app.id === applicationId);
-  return application ? JSON.parse(JSON.stringify(application)) : null;
+  try {
+    const allApplicationsResult = await getAllApplications();
+    const application = allApplicationsResult.applications.find(app => app._id!.toString() === applicationId);
+    
+    return application ? dbApplicationToAppApplication(application) : null;
+  } catch (error) {
+    console.error('Get application by ID error:', error);
+    return null;
+  }
 }
 
-export async function getProgramForApplication(programId: string): Promise<Program | null> {
-    // This function was originally for fetching from DB, now it can use programActions
-    return getProgramById(programId);
+export async function getApplicationsByUserId(userId: string): Promise<Application[]> {
+  try {
+    const dbApplications = await dbGetApplicationsByUserId(userId);
+    return dbApplications.map(dbApplicationToAppApplication);
+  } catch (error) {
+    console.error('Get applications by user ID error:', error);
+    return [];
+  }
 }
 
+export async function getAllApplicationsForCounselor(): Promise<Application[]> {
+  try {
+    const result = await getAllApplications();
+    return result.applications.map(dbApplicationToAppApplication);
+  } catch (error) {
+    console.error('Get all applications error:', error);
+    return [];
+  }
+}
 
 export async function updateApplicationStatusAction(
   applicationId: string,
   status: 'approved' | 'denied',
+  counselorNotes?: string,
   denialReason?: string,
   aiRecommendedPrograms?: string[]
-): Promise<Application | null> {
-  const appIndex = MOCK_APPLICATIONS_DB.findIndex(app => app.id === applicationId);
-  if (appIndex === -1) throw new Error('Application not found');
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    // For better clarity, log what we're doing
+    console.log(`Updating application ${applicationId} status to ${status}`);
+    if (denialReason) console.log(`Denial reason: ${denialReason}`);
+    if (aiRecommendedPrograms?.length) console.log(`AI recommendations: ${aiRecommendedPrograms.join(', ')}`);
+    
+    const result = await updateApplicationStatus(
+      applicationId,
+      status,
+      counselorNotes,
+      denialReason,
+      aiRecommendedPrograms
+    );
 
-  const application = MOCK_APPLICATIONS_DB[appIndex];
-  application.status = status;
-  if (status === 'denied') {
-    application.denialReason = denialReason;
-    if (aiRecommendedPrograms) {
-        application.aiRecommendedPrograms = aiRecommendedPrograms;
+    if (result.success) {
+      const application = await getApplicationById(applicationId);
+      if (application) {
+        const user = await getUserById(application.userId);
+        const program = await getProgramById(application.programId);
+        
+        if (user && program) {
+          if (status === 'approved') {
+            sendApplicationStatusUpdateEmail(user.email, program.title, application.referenceNumber, 'approved').catch(console.error);
+          } else {
+            sendApplicationStatusUpdateEmail(user.email, program.title, application.referenceNumber, 'denied', denialReason, aiRecommendedPrograms).catch(console.error);
+          }
+        }
+      }
     }
-  }
-  
-  MOCK_APPLICATIONS_DB[appIndex] = application;
 
-  if (application.applicantEmail && application.programTitle) {
-     sendApplicationStatusUpdateEmail(
-        application.applicantEmail,
-        `${application.personalDetails.firstName} ${application.personalDetails.lastName}`,
-        application.programTitle,
-        status,
-        denialReason,
-        aiRecommendedPrograms
-    ).catch(console.error);
-  } else {
-    console.warn("Could not send status update email: missing applicantEmail or programTitle on application ID:", applicationId);
+    return result;
+  } catch (error) {
+    console.error('Update application status error:', error);
+    return { success: false, message: 'Failed to update application status' };
   }
-  return JSON.parse(JSON.stringify(application));
 }
 
-export async function getApplicationsByUserId(userId: string): Promise<Application[]> {
-  const applications = MOCK_APPLICATIONS_DB.filter(app => app.userId === userId).sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
-  return JSON.parse(JSON.stringify(applications));
+export async function getProgramForApplication(programId: string): Promise<Program | null> {
+  return await getProgramById(programId);
 }
 
-export async function getAllApplicationsForCounselor(filters?: { status?: string }): Promise<Application[]> {
-  let applications = [...MOCK_APPLICATIONS_DB];
-  if (filters?.status && filters.status !== 'all') {
-    applications = applications.filter(app => app.status === filters.status);
+export async function deleteApplicationAction(applicationId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const result = await deleteApplication(applicationId);
+    return result;
+  } catch (error) {
+    console.error('Delete application error:', error);
+    return { success: false, message: 'Failed to delete application' };
   }
-  applications.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
-  return JSON.parse(JSON.stringify(applications));
+}
+
+export async function checkUserApplicationStatus(userId: string, programId: string): Promise<{ 
+  canApply: boolean; 
+  message?: string;
+  existingStatus?: string;
+  applicationId?: string;
+}> {
+  try {
+    const result = await checkExistingApplications(userId, programId);
+    
+    if (!result.exists) {
+      return { canApply: true };
+    }
+    
+    // User already has an application for this program
+    if (result.status === 'approved') {
+      return { 
+        canApply: false, 
+        message: 'You are already enrolled in this program.',
+        existingStatus: result.status,
+        applicationId: result.applicationId
+      };
+    }
+    
+    return { 
+      canApply: false, 
+      message: `You already have a ${result.status} application for this program.`,
+      existingStatus: result.status,
+      applicationId: result.applicationId
+    };
+  } catch (error) {
+    console.error('Check application status error:', error);
+    return { canApply: true }; // Default to allowing application on error
+  }
 }

@@ -48,10 +48,28 @@ To get a local copy up and running, follow these simple steps.
     ```
 
 3.  **Set up environment variables:**
-    Create a `.env.local` file in the root of the project and add your Google AI API Key. You can get one from [Google AI Studio](https://aistudio.google.com/app/apikey).
+    Create a `.env.local` file in the root of the project with the following:
     ```
+    # MongoDB Database
+    MONGODB_URI=your_mongodb_connection_string
+    
+    # NextAuth Configuration
+    NEXTAUTH_SECRET=your-secret-key
+    NEXTAUTH_URL=http://localhost:9002
+    
+    # Gmail Email Service
+    GMAIL_USER=your-gmail@gmail.com
+    GMAIL_APP_PASSWORD=your-app-password
+    
+    # AI Features (optional)
     GOOGLE_API_KEY=your_google_api_key_here
     ```
+    
+    For Gmail App Password:
+    - Go to your Google Account → Security
+    - Enable 2-Step Verification
+    - Create an App Password for "Mail" and device "Other"
+    - Copy the 16-character password provided
 
 4.  **Run the Genkit development server:**
     In a separate terminal, start the Genkit development UI, which allows you to inspect and test your AI flows.

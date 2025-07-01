@@ -88,9 +88,22 @@ export default function ApplicationReviewPage({ params: paramsPromise }: { param
     }
 
     try {
-      const updatedApp = await updateApplicationStatusAction(application.id, status, denialReason, recommendedProgramsForEmail);
-      if (updatedApp) {
-        setApplication(updatedApp);
+      // Argument order: applicationId, status, counselorNotes, denialReason, aiRecommendedPrograms
+      const result = await updateApplicationStatusAction(
+        application.id, 
+        status, 
+        denialReason, // Private counselor notes (could be more detailed)
+        status === 'denied' ? denialReason : undefined, // Same denial reason sent to student
+        recommendedProgramsForEmail
+      );
+      
+      if (result.success) {
+        // Refresh the application data after update
+        const updatedApp = await getApplicationById(application.id);
+        if (updatedApp) {
+          setApplication(updatedApp);
+        }
+        
         toast({
           title: `Application ${status === 'approved' ? 'Approved' : 'Denied'}`,
           description: `The application has been successfully updated. An email notification ${status === 'approved' ? 'will be sent.' : 'with feedback and recommendations will be sent.'}`,
@@ -149,17 +162,17 @@ export default function ApplicationReviewPage({ params: paramsPromise }: { param
 
 
   const applicationDetails = [
-    { label: "Full Name", value: `${application.personalDetails.firstName} ${application.personalDetails.lastName}` },
+    { label: "Full Name", value: application.personalDetails ? `${application.personalDetails.firstName || ''} ${application.personalDetails.lastName || ''}` : 'Not provided' },
     { label: "Email", value: application.applicantEmail || applicant?.email || 'N/A' },
-    { label: "Date of Birth", value: new Date(application.personalDetails.dateOfBirth).toLocaleDateString() },
-    { label: "Phone", value: application.personalDetails.phone },
-    { label: "Address", value: application.personalDetails.address },
+    { label: "Date of Birth", value: application.personalDetails?.dateOfBirth ? new Date(application.personalDetails.dateOfBirth).toLocaleDateString() : 'Not provided' },
+    { label: "Phone", value: application.personalDetails?.phone || 'Not provided' },
+    { label: "Address", value: application.personalDetails?.address || 'Not provided' },
   ];
 
   const educationDetails = [
-    { label: "Highest Qualification", value: application.educationalBackground.highestQualification },
-    { label: "Institution", value: application.educationalBackground.institution },
-    { label: "Year of Completion", value: application.educationalBackground.yearOfCompletion },
+    { label: "Highest Qualification", value: application.educationalBackground?.highestQualification || 'Not provided' },
+    { label: "Institution", value: application.educationalBackground?.institution || 'Not provided' },
+    { label: "Year of Completion", value: application.educationalBackground?.yearOfCompletion || 'Not provided' },
   ];
 
   return (
@@ -278,9 +291,11 @@ export default function ApplicationReviewPage({ params: paramsPromise }: { param
                           <AIProgramRecommender
                             compact
                             initialValues={{
-                                background: `${application.educationalBackground.highestQualification} from ${application.educationalBackground.institution}`,
+                                background: application.educationalBackground ? 
+                                  `${application.educationalBackground.highestQualification || 'Not specified'} from ${application.educationalBackground.institution || 'Not specified'}` :
+                                  'Educational background not provided',
                                 interests: "Related to applied program", 
-                                statementOfPurpose: application.statementOfPurpose
+                                statementOfPurpose: application.statementOfPurpose || 'Not provided'
                             }}
                             onRecommendation={setAiRecommendationOutput}
                            />

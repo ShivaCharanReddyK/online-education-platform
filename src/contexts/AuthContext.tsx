@@ -8,7 +8,7 @@ import { findUserByEmail, createUser, verifyUserPassword, getUserById } from '@/
 interface AuthContextType {
   user: User | null;
   login: (email: string, passwordInput: string, roleHint?: 'student' | 'counselor') => Promise<{ success: boolean; message?: string; user?: User | null }>;
-  signup: (email: string, passwordInput: string, role: 'student' | 'counselor') => Promise<{ success: boolean; message?: string; user?: User | null }>;
+  signup: (email: string, passwordInput: string, role: 'student' | 'counselor', firstName?: string, lastName?: string) => Promise<{ success: boolean; message?: string; user?: User | null }>;
   logout: () => void;
   loading: boolean;
   fetchCurrentUser: () => Promise<void>;
@@ -72,10 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, passwordInput: string, role: 'student' | 'counselor') => {
+  const signup = async (email: string, passwordInput: string, role: 'student' | 'counselor', firstName?: string, lastName?: string) => {
     setLoading(true);
     try {
-      const newUser = await createUser(email, role, passwordInput);
+      const newUser = await createUser(email, role, passwordInput, firstName, lastName);
       if (newUser) {
         setUser(newUser);
         if (newUser.id && typeof window !== 'undefined') {

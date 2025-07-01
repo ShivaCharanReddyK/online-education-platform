@@ -1,5 +1,3 @@
-
-
 export interface User {
   id?: string; 
   email: string;
@@ -7,6 +5,32 @@ export interface User {
   firstName?: string;
   lastName?: string;
   password?: string; // Only for in-memory/localStorage mock, not for real DBs
+}
+
+// NextAuth extensions
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      email: string
+      name: string
+      role: 'student' | 'counselor'
+    }
+  }
+
+  interface User {
+    id: string
+    email: string
+    name: string
+    role: 'student' | 'counselor'
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    role: 'student' | 'counselor'
+  }
 }
 
 export interface Program {
@@ -45,6 +69,7 @@ export interface Application {
   };
   statementOfPurpose: string;
   status: 'pending' | 'approved' | 'denied';
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
   denialReason?: string;
   referenceNumber: string;
   submissionDate: string; // ISO date string

@@ -2,53 +2,69 @@
 'use server';
 
 import type { Program } from '@/types';
-import { DUMMY_PROGRAMS as seedPrograms } from '@/lib/constants';
+import { getPrograms, getProgramById as dbGetProgramById, seedPrograms } from '@/lib/database';
 
-let programsCache: Program[] = seedPrograms.map((p, index) => ({
-    ...p,
-    id: `prog-${index + 1}`, // Ensure dummy programs have string IDs
-    startDate: new Date(p.startDate).toISOString() // Ensure date is string
-}));
-
-
-export async function getAllPrograms(filters?: { category?: string; duration?: string; startDate?: string; searchTerm?: string }): Promise<Program[]> {
-  // Basic filtering for mock data
-  let filteredPrograms = [...programsCache];
-
-  if (filters) {
-    if (filters.category && filters.category !== 'All') {
-      filteredPrograms = filteredPrograms.filter(p => p.category === filters.category);
-    }
-    if (filters.startDate) {
-      filteredPrograms = filteredPrograms.filter(p => new Date(p.startDate) >= new Date(filters.startDate!));
-    }
-    if (filters.searchTerm) {
-      const term = filters.searchTerm.toLowerCase();
-      filteredPrograms = filteredPrograms.filter(p => 
-        p.title.toLowerCase().includes(term) ||
-        p.description.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term)
-      );
-    }
-    // Duration filter would need getDurationCategory logic here or be simpler
+// Convert Database Program to App Program format
+function dbProgramToAppProgram(dbProgram: any): Program {
+  return {
+    id: dbProgram._id.toString(),
+    title: dbProgram.title,
+    description: dbProgram.description,
+    longDescription: dbProgram.longDescription,
+    category: dbProgram.category,
+    duration: dbProgram.duration,
+    startDate: dbProgram.startDate,
+    imageUrl: dbProgram.imageUrl,
+    aiHint: dbProgram.aiHint,
+    features: dbProgram.features,
+    tuitionFee: dbProgram.tuitionFee,
+    learningOutcomes: dbProgram.learningOutcomes,
+    modules: dbProgram.modules
   }
-  return JSON.parse(JSON.stringify(filteredPrograms)); // Simulate DB fetch (deep copy)
+}
+
+export async function getAllPrograms(filters?: { 
+  category?: string; 
+  duration?: string; 
+  startDate?: string; 
+  searchTerm?: string;
+  page?: number;
+  limit?: number;
+}): Promise<Program[]> {
+  try {
+    // Ensure programs are seeded
+    await seedPrograms();
+    
+    const result = await getPrograms({
+      category: filters?.category,
+      search: filters?.searchTerm,
+      page: filters?.page || 1,
+      limit: filters?.limit || 50
+    });
+
+    return result.programs.map(dbProgramToAppProgram);
+  } catch (error) {
+    console.error('Get all programs error:', error);
+    return [];
+  }
 }
 
 export async function getProgramById(id: string): Promise<Program | null> {
-  const program = programsCache.find(p => p.id === id);
-  return program ? JSON.parse(JSON.stringify(program)) : null;
+  try {
+    const dbProgram = await dbGetProgramById(id);
+    return dbProgram ? dbProgramToAppProgram(dbProgram) : null;
+  } catch (error) {
+    console.error('Get program by ID error:', error);
+    return null;
+  }
 }
 
-// Seed function is not needed if not using a DB
+// Ensure programs are seeded on startup
 export async function seedProgramsIfEmpty(): Promise<void> {
-  // console.log("Using DUMMY_PROGRAMS directly, no seeding needed for mock implementation.");
-  // If programsCache could be empty and needs initialization from DUMMY_PROGRAMS:
-  if (programsCache.length === 0) {
-      programsCache = seedPrograms.map((p, index) => ({
-        ...p,
-        id: `prog-${index + 1}`,
-        startDate: new Date(p.startDate).toISOString()
-    }));
+  try {
+    await seedPrograms();
+    console.log('✅ Programs seeding check completed');
+  } catch (error) {
+    console.error('❌ Error during programs seeding:', error);
   }
 }

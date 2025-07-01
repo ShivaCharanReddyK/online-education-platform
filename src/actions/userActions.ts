@@ -1,74 +1,100 @@
 
 'use server';
 
+import bcrypt from 'bcryptjs'
+import { createUser as dbCreateUser, getUserByEmail, getUserById as dbGetUserById } from '@/lib/database'
 import type { User } from '@/types';
+import { sendWelcomeEmail } from '@/actions/emailActions'
 
-// Mock user storage using globalThis for better persistence in dev mode
-declare global {
-  // eslint-disable-next-line no-var
-  var __MOCK_USERS_DB__: User[] | undefined;
+// Convert Database User to App User format
+function dbUserToAppUser(dbUser: any): User {
+  return {
+    id: dbUser._id.toString(),
+    email: dbUser.email,
+    role: dbUser.role,
+    firstName: dbUser.firstName,
+    lastName: dbUser.lastName
+  }
 }
 
-if (!globalThis.__MOCK_USERS_DB__) {
-  console.log("Initializing MOCK_USERS_DB on globalThis");
-  globalThis.__MOCK_USERS_DB__ = [
-    { id: 'student-1', email: 'student@example.com', role: 'student', password: 'password123', firstName: 'Student' },
-    { id: 'counselor-1', email: 'counselor@example.com', role: 'counselor', password: 'password123', firstName: 'Counselor' },
-  ];
-}
-const MOCK_USERS_DB = globalThis.__MOCK_USERS_DB__;
+export async function createUser(
+  email: string,
+  role: 'student' | 'counselor',
+  password: string,
+  firstName?: string,
+  lastName?: string
+): Promise<User | null> {
+  try {
+    const result = await dbCreateUser({
+      email,
+      password,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      role
+    })
 
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create user')
+    }
+
+    // Get the created user
+    const dbUser = await getUserByEmail(email)
+    if (!dbUser) {
+      throw new Error('User created but could not retrieve')
+    }
+    
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(email, firstName || '', lastName || '', role)
+      console.log(`Welcome email sent to ${email}`)
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError)
+      // Continue even if email fails - we don't want to prevent registration
+    }
+
+    return dbUserToAppUser(dbUser)
+  } catch (error) {
+    console.error('Create user action error:', error)
+    throw error
+  }
+}
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  const user = MOCK_USERS_DB.find(u => u.email === email);
-  if (user) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return JSON.parse(JSON.stringify(userWithoutPassword)); // Deep copy
+  try {
+    const dbUser = await getUserByEmail(email)
+    return dbUser ? dbUserToAppUser(dbUser) : null
+  } catch (error) {
+    console.error('Find user by email error:', error)
+    return null
   }
-  return null;
 }
 
-export async function createUser(email: string, role: 'student' | 'counselor', passwordInput: string): Promise<User | null> {
-  if (MOCK_USERS_DB.some(u => u.email === email)) {
-    throw new Error('User with this email already exists.');
-  }
-  const newUser: User = {
-    id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    email,
-    role,
-    password: passwordInput, // Storing plain text password for mock
-    // For newly created users, firstName might not be immediately available unless passed to createUser
-    // It's typically collected later or during application.
-  };
-  MOCK_USERS_DB.push(JSON.parse(JSON.stringify(newUser))); // Store a copy
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...userWithoutPassword } = newUser;
-  return JSON.parse(JSON.stringify(userWithoutPassword)); // Deep copy
-}
+export async function verifyUserPassword(email: string, password: string): Promise<User | null> {
+  try {
+    const dbUser = await getUserByEmail(email)
+    if (!dbUser) return null
 
-export async function verifyUserPassword(email: string, passwordInput: string): Promise<User | null> {
-    const user = MOCK_USERS_DB.find(u => u.email === email);
-    if (user && user.password === passwordInput) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password, ...userWithoutPassword } = user;
-        return JSON.parse(JSON.stringify(userWithoutPassword)); // Deep copy
-    }
-    return null;
+    const passwordsMatch = await bcrypt.compare(password, dbUser.password)
+    if (!passwordsMatch) return null
+
+    return dbUserToAppUser(dbUser)
+  } catch (error) {
+    console.error('Verify password error:', error)
+    return null
+  }
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
-  const user = MOCK_USERS_DB.find(u => u.id === userId);
-  if (user) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return JSON.parse(JSON.stringify(userWithoutPassword)); // Deep copy
+  try {
+    const dbUser = await dbGetUserById(userId)
+    return dbUser ? dbUserToAppUser(dbUser) : null
+  } catch (error) {
+    console.error('Get user by ID action error:', error)
+    return null
   }
-  return null;
 }
 
-// Helper to log the current state of MOCK_USERS_DB (for debugging, can be removed)
+// Helper to log the current state (for debugging, can be removed)
 export async function logMockUsers() {
-  console.log("Current MOCK_USERS_DB:", MOCK_USERS_DB);
+  console.log("Using MongoDB database instead of mock users");
 }

@@ -1,36 +1,63 @@
-// This file is a placeholder after rolling back MongoDB integration.
-// It's kept to prevent import errors if other files still reference it.
-// No actual database connection or operations are performed here.
+import { MongoClient, Db } from 'mongodb'
 
-// console.warn(
-//   "MongoDB integration has been rolled back. src/lib/mongodb.ts is a placeholder."
-// );
+if (!process.env.MONGODB_URI) {
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
+}
 
-export async function getDb() {
-  // console.warn("getDb called, but MongoDB is not integrated.");
-  return null; // Or throw an error, or return a mock DB object if necessary
+const uri = process.env.MONGODB_URI
+const options = {}
+
+let client: MongoClient
+let clientPromise: Promise<MongoClient>
+
+if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a global variable so that the value
+  // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>
+  }
+
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = client.connect()
+  }
+  clientPromise = globalWithMongo._mongoClientPromise
+} else {
+  // In production mode, it's best to not use a global variable.
+  client = new MongoClient(uri, options)
+  clientPromise = client.connect()
+}
+
+// Export a module-scoped MongoClient promise. By doing this in a
+// separate module, the client can be shared across functions.
+export default clientPromise
+
+export async function getDb(): Promise<Db> {
+  const client = await clientPromise
+  return client.db('learnflow')
 }
 
 export async function getUsersCollection() {
-  // console.warn("getUsersCollection called, but MongoDB is not integrated.");
-  return null; // Or throw an error
+  const db = await getDb()
+  return db.collection('users')
 }
 
 export async function getProgramsCollection() {
-  // console.warn("getProgramsCollection called, but MongoDB is not integrated.");
-  return null;
+  const db = await getDb()
+  return db.collection('programs')
 }
 
 export async function getApplicationsCollection() {
-  // console.warn("getApplicationsCollection called, but MongoDB is not integrated.");
-  return null;
+  const db = await getDb()
+  return db.collection('applications')
 }
 
 export async function getPaymentsCollection() {
-  // console.warn("getPaymentsCollection called, but MongoDB is not integrated.");
-  return null;
+  const db = await getDb()
+  return db.collection('payments')
 }
 
-// Default export can be null or a mock client promise
-const clientPromise = Promise.resolve(null); 
-export default clientPromise;
+export async function getPaymentPlansCollection() {
+  const db = await getDb()
+  return db.collection('paymentPlans')
+}
