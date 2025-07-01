@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -11,44 +10,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { DollarSign, CheckCircle, AlertTriangle, Clock, Loader2, FileText, CreditCard } from 'lucide-react';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DollarSign, CheckCircle, AlertTriangle, Clock, Loader2, FileText, CreditCard, Calendar, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { getApplicationsByUserId } from '@/actions/applicationActions';
+import { getApplicationsByUserId, deleteApplicationAction } from '@/actions/applicationActions';
 import { getProgramById } from '@/actions/programActions';
-
-// Mock payments storage (in-memory for client-side simulation for this page)
-let MOCK_PAYMENTS_DB: Payment[] = [];
-
-
-async function createPaymentAction(applicationId: string, userId: string, amount: number, paymentMethod: 'full' | 'plan'): Promise<Payment> {
-  console.log(`Simulating payment for application ${applicationId}, amount ${amount}, method ${paymentMethod}`);
-  
-  const newPayment: Payment = {
-    id: `pay-${Date.now()}`,
-    applicationId,
-    userId,
-    amount,
-    paymentDate: new Date().toISOString(),
-    status: 'completed', // Simulate immediate completion for demo
-    paymentMethod,
-    transactionId: `txn_${Date.now()}`
-  };
-  // Update our mock DB
-  const existingPaymentIndex = MOCK_PAYMENTS_DB.findIndex(p => p.applicationId === applicationId);
-  if (existingPaymentIndex > -1) {
-    MOCK_PAYMENTS_DB[existingPaymentIndex] = newPayment;
-  } else {
-    MOCK_PAYMENTS_DB.push(newPayment);
-  }
-  return JSON.parse(JSON.stringify(newPayment));
-}
-
-async function getPaymentsByUserId(userId: string): Promise<Payment[]> {
-    console.log("Fetching mock payments for user", userId);
-    const userPayments = MOCK_PAYMENTS_DB.filter(p => p.userId === userId);
-    return JSON.parse(JSON.stringify(userPayments));
-}
+import { PaymentForm } from '@/components/payment/PaymentForm';
+import { PaymentPlanForm } from '@/components/payment/PaymentPlanForm';
+import { PaymentHistory } from '@/components/payment/PaymentHistory';
+import { getUserPaymentHistory } from '@/actions/paymentActions';
 
 
 export default function StudentDashboardPage() {
@@ -56,9 +28,13 @@ export default function StudentDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [applications, setApplications] = useState<Application[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]); 
+  const [payments, setPayments] = useState<any[]>([]); 
   const [programsCache, setProgramsCache] = useState<Record<string, Program>>({});
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isDeletingApplication, setIsDeletingApplication] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState<string | null>(null);
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -97,37 +73,18 @@ export default function StudentDashboardPage() {
           }
         }
 
-        const combinedProgramsData = { ...currentProgramsCacheState, ...newCacheEntries };
-
-        const userPayments = await getPaymentsByUserId(user.id);
-        const currentAppPayments: Payment[] = [...userPayments];
-
-        userApplications.forEach(app => {
-            if (app.status === 'approved' && !currentAppPayments.find(p => p.applicationId === app.id)) {
-                const programDetail = combinedProgramsData[app.programId];
-                const programTuition = programDetail?.tuitionFee || 0;
-                
-                currentAppPayments.push({
-                    id: `pay-sim-${app.id}`,
-                    applicationId: app.id!,
-                    userId: user.id!,
-                    amount: programTuition,
-                    paymentDate: new Date().toISOString(), 
-                    status: 'pending', 
-                    paymentMethod: 'full', 
-                    transactionId: `sim_txn_${app.id}`
-                });
-            }
-        });
-        setPayments(currentAppPayments);
-
+        // Get payment history
+        const paymentHistoryResult = await getUserPaymentHistory(user.id);
+        if (paymentHistoryResult.success) {
+          setPayments(paymentHistoryResult.payments || []);
+        }
     } catch (error) {
         console.error("Failed to load dashboard data:", error);
         toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive"});
     } finally {
         setIsLoadingData(false);
     }
-  }, [user, toast]); 
+  }, [user, toast, programsCache]); 
 
   useEffect(() => {
     if (user && user.id && !authLoading) {
@@ -144,48 +101,35 @@ export default function StudentDashboardPage() {
     return programsCache[programId]?.tuitionFee || 0;
   }
 
-  const handleMakePayment = async (applicationId: string, paymentMethod: 'full' | 'plan') => {
-    if (!user || !user.id) {
-        toast({ title: "Error", description: "User not found.", variant: "destructive" });
-        return;
-    }
-    const app = applications.find(a => a.id === applicationId);
-    if (!app || !app.programId) {
-        toast({ title: "Error", description: "Application or program details not found.", variant: "destructive" });
-        return;
-    }
+  const handleDeleteApplication = async (applicationId: string) => {
+    if (!applicationId) return;
     
-    let amount = getProgramTuition(app.programId);
-    if (amount <= 0) {
-        const programDetails = await getProgramById(app.programId); // Fetch on demand if not in cache or 0
-        if (programDetails && programDetails.tuitionFee > 0) {
-            amount = programDetails.tuitionFee;
-             // Optionally update cache if this case is hit often, though fetchDashboardData should handle it
-            setProgramsCache(prev => ({...prev, [app.programId]: programDetails}));
-        } else {
-            toast({ title: "Error", description: "Program tuition fee not available or is zero.", variant: "destructive" });
-            return;
-        }
-    }
-
-
-    setIsLoadingData(true); 
+    setIsDeletingApplication(applicationId);
     try {
-      const newPayment = await createPaymentAction(applicationId, user.id, amount, paymentMethod);
-      setPayments(prevPayments => {
-          const updatedPayments = prevPayments.filter(p => p.applicationId !== applicationId);
-          updatedPayments.push(newPayment);
-          return updatedPayments;
-      });
-      toast({
-        title: "Payment Successful!",
-        description: `Your ${paymentMethod} payment has been processed.`,
-      });
+      const result = await deleteApplicationAction(applicationId);
+      if (result.success) {
+        // Remove the application from the list
+        setApplications(prevApplications => 
+          prevApplications.filter(app => app.id !== applicationId)
+        );
+        toast({
+          title: "Application Deleted",
+          description: "Your application has been successfully deleted."
+        });
+        setShowDeleteDialog(false);
+      } else {
+        throw new Error(result.message || "Failed to delete application");
+      }
     } catch (error) {
-      console.error("Payment processing error:", error);
-      toast({ title: "Payment Error", description: "Could not process payment.", variant: "destructive" });
+      console.error("Delete application error:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete application. Please try again.",
+        variant: "destructive"
+      });
     } finally {
-      setIsLoadingData(false); 
+      setIsDeletingApplication(null);
+      setApplicationToDelete(null);
     }
   };
 
@@ -276,6 +220,11 @@ export default function StudentDashboardPage() {
                                 </>
                             )}
                         </Alert>
+                        <div className="mt-4">
+                          <Button variant="outline" asChild>
+                              <Link href="/programs">Browse Other Programs</Link>
+                          </Button>
+                        </div>
                      </CardContent>
                   )}
                   {app.status === 'approved' && (
@@ -285,37 +234,131 @@ export default function StudentDashboardPage() {
                         <h3 className="text-lg font-semibold mb-3 flex items-center">
                             <CreditCard className="mr-2 h-5 w-5 text-primary" /> Payment Required
                         </h3>
-                        {payments.find(p => p.applicationId === app.id && p.status === 'pending') ? (
-                          <div className="space-y-3">
-                            <p className="text-muted-foreground">
-                              Congratulations! Your application has been approved. Please complete your payment to secure your spot.
-                              Tuition Fee: <strong className="text-foreground">${getProgramTuition(app.programId).toLocaleString()}</strong>
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-3">
-                              <Button onClick={() => handleMakePayment(app.id!, 'full')} disabled={isLoadingData}>
-                                {isLoadingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Pay Full Amount
-                              </Button>
-                              <Button variant="outline" onClick={() => handleMakePayment(app.id!, 'plan')} disabled={isLoadingData}>
-                                {isLoadingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Set Up Payment Plan
-                              </Button>
+                        {!app.paymentStatus || app.paymentStatus === 'unpaid' ? (
+                          <div className="space-y-4">
+                            <div className="max-w-4xl mx-auto text-center mb-6">
+                              <Badge variant="outline" className="mb-2 bg-green-50 text-green-600 border-green-200">
+                                Application Approved
+                              </Badge>
+                              <h3 className="text-xl font-semibold mb-2">Complete Your Payment</h3>
+                              <p className="text-muted-foreground">
+                                Congratulations! Your application has been approved. Please complete your payment to secure your spot.
+                              </p>
+                              <div className="mt-2 text-lg font-semibold">
+                                Tuition Fee: <span className="text-primary">${getProgramTuition(app.programId).toLocaleString()}</span>
+                              </div>
+                            </div>
+                            
+                            <Tabs defaultValue="full-payment" className="w-full">
+                              <div className="bg-muted/30 p-4 rounded-lg mb-6 max-w-md mx-auto">
+                                <TabsList className="grid grid-cols-2 w-full">
+                                  <TabsTrigger value="full-payment" className="text-sm font-medium py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <CreditCard className="h-4 w-4" />
+                                      Full Payment
+                                    </div>
+                                  </TabsTrigger>
+                                  <TabsTrigger value="payment-plan" className="text-sm font-medium py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4" />
+                                      Payment Plan
+                                    </div>
+                                  </TabsTrigger>
+                                </TabsList>
+                              </div>
+                              
+                              <TabsContent value="full-payment" className="mt-0">
+                                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                                  <PaymentForm 
+                                    application={app} 
+                                    programTitle={getProgramTitle(app.programId)}
+                                    amount={getProgramTuition(app.programId)}
+                                    onSuccess={(url) => {
+                                      setReceiptUrl(url);
+                                      toast({
+                                        title: "Payment Successful",
+                                        description: "Your payment has been processed successfully!"
+                                      });
+                                      fetchDashboardData();
+                                    }}
+                                  />
+                                </div>
+                              </TabsContent>
+                              
+                              <TabsContent value="payment-plan" className="mt-0">
+                                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                                  <PaymentPlanForm 
+                                    application={app}
+                                    programTitle={getProgramTitle(app.programId)}
+                                    totalAmount={getProgramTuition(app.programId)}
+                                    onSuccess={() => {
+                                      toast({
+                                        title: "Payment Plan Created",
+                                        description: "Your payment plan has been set up successfully!"
+                                      });
+                                      fetchDashboardData();
+                                    }}
+                                  />
+                                </div>
+                              </TabsContent>
+                            </Tabs>
+                          </div>
+                        ) : app.paymentStatus === 'paid' || app.paymentStatus === 'partial' ? (
+                          <div className="space-y-6 max-w-4xl mx-auto">
+                            <Alert variant="default" className={app.paymentStatus === 'paid' ? "bg-green-50 border-green-200 text-green-700" : "bg-blue-50 border-blue-200 text-blue-700"}>
+                              {app.paymentStatus === 'paid' ? (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              ) : (
+                                <Clock className="h-5 w-5 text-blue-600" />
+                              )}
+                              <AlertTitle className={app.paymentStatus === 'paid' ? "text-green-700" : "text-blue-700"}>
+                                {app.paymentStatus === 'paid' ? 'Payment Completed!' : 'Payment Plan Active'}
+                              </AlertTitle>
+                              <AlertDescription className={app.paymentStatus === 'paid' ? "text-green-600" : "text-blue-600"}>
+                                {app.paymentStatus === 'paid' 
+                                  ? 'Your payment for this program has been successfully processed. Welcome aboard!'
+                                  : 'Your payment plan is active. Please check the payment history for details.'}
+                              </AlertDescription>
+                            </Alert>
+                            
+                            <div className="mt-8">
+                              <div className="mb-5 pb-2 border-b">
+                                <h3 className="text-lg font-medium flex items-center gap-2">
+                                  <FileText className="h-5 w-5 text-primary" /> Payment History
+                                </h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  View your payment records and plan details
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-6 shadow-sm border">
+                                <PaymentHistory application={app} />
+                              </div>
                             </div>
                           </div>
-                        ) : payments.find(p => p.applicationId === app.id && p.status === 'completed') ? (
-                          <Alert variant="default" className="bg-green-50 border-green-200 text-green-700">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                            <AlertTitle className="text-green-700">Payment Completed!</AlertTitle>
-                            <AlertDescription className="text-green-600">
-                              Your payment for this program has been successfully processed using the {payments.find(p => p.applicationId === app.id)?.paymentMethod} method. Welcome aboard!
-                            </AlertDescription>
-                          </Alert>
                         ) : null}
                       </CardContent>
                     </>
                   )}
-                   <CardFooter>
-                        <Button variant="link" asChild className="p-0 h-auto">
-                            <Link href={`/programs/${app.programId}`}>View Program Details</Link>
-                        </Button>
+                   <CardFooter className="flex justify-between">
+                     <div className="flex items-center gap-3">
+                         <Button variant="link" asChild className="p-0 h-auto">
+                             <Link href={`/programs/${app.programId}`}>View Program Details</Link>
+                         </Button>
+                     </div>
+                     {/* Add delete button for both pending and denied applications */}
+                     {(app.status === 'pending' || app.status === 'denied') && (
+                       <Button 
+                         variant="outline" 
+                         className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700"
+                         onClick={() => {
+                           setApplicationToDelete(app.id);
+                           setShowDeleteDialog(true);
+                         }}
+                       >
+                         <Trash2 className="h-4 w-4 mr-2" />
+                         Delete Application
+                       </Button>
+                     )}
                    </CardFooter>
                 </Card>
               ))}
@@ -323,6 +366,35 @@ export default function StudentDashboardPage() {
           )}
         </section>
       </div>
+      
+      {/* Global Dialog for Application Deletion */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete your application for {applicationToDelete && getProgramTitle(applications.find(app => app.id === applicationToDelete)?.programId || '')}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" onClick={() => setApplicationToDelete(null)}>Cancel</Button>
+            </DialogClose>
+            <Button 
+              variant="destructive" 
+              onClick={() => applicationToDelete && handleDeleteApplication(applicationToDelete)}
+              disabled={isDeletingApplication !== null}
+            >
+              {isDeletingApplication !== null ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete Application
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
